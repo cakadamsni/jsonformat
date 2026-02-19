@@ -1,459 +1,870 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JSON Formatter</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #0d0f14;
-    --surface: #141720;
-    --surface2: #1c2030;
-    --border: #252a3a;
-    --accent: #00e5a0;
-    --accent2: #0088ff;
-    --text: #e8eaf0;
-    --muted: #5a6080;
-    --error: #ff4d6a;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON Formatter & Diff</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #141720;
+      --surface2: #1c2030;
+      --border: #252a3a;
+      --accent: #00e5a0;
+      --accent2: #0088ff;
+      --text: #e8eaf0;
+      --muted: #5a6080;
+      --error: #ff4d6a;
 
-    /* syntax colors */
-    --key: #79b8ff;
-    --string: #9ecbff;
-    --number: #f8c555;
-    --bool: #ff9f7f;
-    --null: #ff4d6a;
-    --bracket: #888faa;
-  }
+      /* syntax colors */
+      --key: #79b8ff;
+      --string: #9ecbff;
+      --number: #f8c555;
+      --bool: #ff9f7f;
+      --null: #ff4d6a;
+      --bracket: #888faa;
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+      /* diff colors */
+      --added: #00e5a0;
+      --added-bg: rgba(0, 229, 160, 0.08);
+      --removed: #ff4d6a;
+      --removed-bg: rgba(255, 77, 106, 0.08);
+      --changed: #f8c555;
+      --changed-bg: rgba(248, 197, 85, 0.08);
+      --identical: #5a6080;
+    }
 
-  body {
-    font-family: 'Syne', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  /* noise overlay */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 0;
-  }
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
 
-  header {
-    padding: 28px 40px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    position: relative;
-    z-index: 1;
-  }
+    /* noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
 
-  .logo {
-    width: 36px;
-    height: 36px;
-    background: var(--accent);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-  }
+    header {
+      padding: 20px 40px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+    }
 
-  h1 {
-    font-size: 22px;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-  }
+    .logo {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
 
-  h1 span { color: var(--accent); }
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
 
-  .subtitle {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--muted);
-    margin-left: auto;
-    letter-spacing: 1px;
-  }
+    h1 span {
+      color: var(--accent);
+    }
 
-  main {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    position: relative;
-    z-index: 1;
-  }
+    /* Tab toggle */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+      margin-left: 16px;
+    }
 
-  .panel {
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid var(--border);
-  }
-  .panel:last-child { border-right: none; }
+    .tab-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 18px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.18s;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
 
-  .panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    gap: 10px;
-  }
+    .tab-btn:hover {
+      color: var(--text);
+      border-color: transparent;
+    }
 
-  .panel-label {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #000;
+      border-color: transparent;
+    }
 
-  .panel-actions { display: flex; gap: 8px; }
+    .tab-btn.active:hover {
+      background: #00ffb3;
+      color: #000;
+      border-color: transparent;
+    }
 
-  button {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 6px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--surface2);
-    color: var(--text);
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-  }
+    .subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      margin-left: auto;
+      letter-spacing: 1px;
+    }
 
-  button:hover { border-color: var(--accent); color: var(--accent); }
-  button.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
-  button.primary:hover { background: #00ffb3; border-color: #00ffb3; color: #000; }
+    /* ─── FORMATTER MODE ─── */
+    #formatter-view {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      position: relative;
+      z-index: 1;
+    }
 
-  textarea {
-    flex: 1;
-    background: var(--surface);
-    border: none;
-    color: var(--text);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12.5px;
-    line-height: 1.7;
-    padding: 20px;
-    resize: none;
-    outline: none;
-    min-height: 500px;
-  }
+    /* ─── DIFF MODE ─── */
+    #diff-view {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      position: relative;
+      z-index: 1;
+    }
 
-  textarea::placeholder { color: var(--muted); }
+    #diff-view.active {
+      display: flex;
+    }
 
-  #output-area {
-    flex: 1;
-    background: var(--surface);
-    overflow: auto;
-    min-height: 500px;
-    padding: 20px;
-  }
+    #formatter-view.active {
+      display: grid;
+    }
 
-  #output-area pre {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12.5px;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
+    .diff-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--border);
+      height: 260px;
+    }
 
-  /* Syntax highlight */
-  .j-key    { color: var(--key); }
-  .j-str    { color: var(--string); }
-  .j-num    { color: var(--number); }
-  .j-bool   { color: var(--bool); }
-  .j-null   { color: var(--null); }
-  .j-brk    { color: var(--bracket); }
+    .diff-output-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
-  .error-msg {
-    color: var(--error);
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    padding: 16px 20px;
-    background: rgba(255,77,106,0.08);
-    border-left: 3px solid var(--error);
-    margin: 20px;
-    border-radius: 4px;
-  }
+    /* ─── SHARED PANEL STYLES ─── */
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
 
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: var(--muted);
-    gap: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-  }
+    .panel:last-child {
+      border-right: none;
+    }
 
-  .empty-state .icon { font-size: 36px; opacity: 0.3; }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      gap: 10px;
+      flex-shrink: 0;
+    }
 
-  footer {
-    padding: 14px 40px;
-    border-top: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px;
-    color: var(--muted);
-    position: relative;
-    z-index: 1;
-  }
+    .panel-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
 
-  #status { margin-left: auto; }
-  #status.ok { color: var(--accent); }
-  #status.err { color: var(--error); }
+    .panel-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
 
-  .toast {
-    position: fixed;
-    bottom: 28px;
-    right: 28px;
-    background: var(--accent);
-    color: #000;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
-    font-weight: 700;
-    padding: 10px 20px;
-    border-radius: 8px;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.2s;
-    pointer-events: none;
-    z-index: 999;
-  }
-  .toast.show { opacity: 1; transform: translateY(0); }
+    button {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
 
-  .divider {
-    width: 1px;
-    background: var(--border);
-    position: relative;
-  }
+    button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
 
-  .convert-btn-wrap {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 0 20px;
-  }
+    button.primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+      font-weight: 700;
+    }
 
-  @media (max-width: 768px) {
-    main { grid-template-columns: 1fr; }
-    header { padding: 18px 20px; }
-    .subtitle { display: none; }
-    footer { padding: 12px 20px; }
-  }
-</style>
+    button.primary:hover {
+      background: #00ffb3;
+      border-color: #00ffb3;
+      color: #000;
+    }
+
+    button.danger:hover {
+      border-color: var(--removed);
+      color: var(--removed);
+    }
+
+    textarea {
+      flex: 1;
+      background: var(--surface);
+      border: none;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      padding: 20px;
+      resize: none;
+      outline: none;
+      min-height: 500px;
+    }
+
+    .diff-textarea {
+      min-height: unset;
+      height: 100%;
+    }
+
+    textarea::placeholder {
+      color: var(--muted);
+    }
+
+    #output-area {
+      flex: 1;
+      background: var(--surface);
+      overflow: auto;
+      min-height: 500px;
+      padding: 20px;
+    }
+
+    #output-area pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ─── DIFF OUTPUT ─── */
+    #diff-output {
+      flex: 1;
+      background: var(--surface);
+      overflow: auto;
+      padding: 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+    }
+
+    .diff-summary {
+      display: flex;
+      gap: 20px;
+      padding: 10px 20px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      flex-wrap: wrap;
+    }
+
+    .diff-summary .badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+    }
+
+    .badge.added {
+      color: var(--added);
+    }
+
+    .badge.removed {
+      color: var(--removed);
+    }
+
+    .badge.changed {
+      color: var(--changed);
+    }
+
+    .badge.identical {
+      color: var(--identical);
+    }
+
+    .diff-entry {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .diff-entry.added {
+      background: var(--added-bg);
+      border-left: 3px solid var(--added);
+    }
+
+    .diff-entry.removed {
+      background: var(--removed-bg);
+      border-left: 3px solid var(--removed);
+    }
+
+    .diff-entry.changed {
+      background: var(--changed-bg);
+      border-left: 3px solid var(--changed);
+    }
+
+    .diff-sign {
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+      width: 16px;
+      text-align: center;
+    }
+
+    .added .diff-sign {
+      color: var(--added);
+    }
+
+    .removed .diff-sign {
+      color: var(--removed);
+    }
+
+    .changed .diff-sign {
+      color: var(--changed);
+    }
+
+    .diff-path {
+      color: var(--key);
+      flex-shrink: 0;
+      min-width: 160px;
+      max-width: 280px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .diff-value {
+      color: var(--muted);
+      flex: 1;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .diff-arrow {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .diff-old {
+      color: var(--removed);
+    }
+
+    .diff-new {
+      color: var(--added);
+    }
+
+    .diff-val {
+      color: var(--string);
+    }
+
+    .diff-section-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 12px 12px 4px;
+      font-weight: 700;
+    }
+
+    /* Syntax highlight */
+    .j-key {
+      color: var(--key);
+    }
+
+    .j-str {
+      color: var(--string);
+    }
+
+    .j-num {
+      color: var(--number);
+    }
+
+    .j-bool {
+      color: var(--bool);
+    }
+
+    .j-null {
+      color: var(--null);
+    }
+
+    .j-brk {
+      color: var(--bracket);
+    }
+
+    .error-msg {
+      color: var(--error);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      padding: 16px 20px;
+      background: rgba(255, 77, 106, 0.08);
+      border-left: 3px solid var(--error);
+      margin: 20px;
+      border-radius: 4px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+
+    .empty-state .icon {
+      font-size: 36px;
+      opacity: 0.3;
+    }
+
+    footer {
+      padding: 14px 40px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      position: relative;
+      z-index: 1;
+    }
+
+    #status {
+      margin-left: auto;
+    }
+
+    #status.ok {
+      color: var(--accent);
+    }
+
+    #status.err {
+      color: var(--error);
+    }
+
+    #diff-status {
+      margin-left: auto;
+    }
+
+    #diff-status.ok {
+      color: var(--accent);
+    }
+
+    #diff-status.err {
+      color: var(--error);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--accent);
+      color: #000;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 10px 20px;
+      border-radius: 8px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Swap button special */
+    .swap-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+
+    .swap-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: rotate(180deg);
+    }
+
+    @media (max-width: 768px) {
+      #formatter-view {
+        grid-template-columns: 1fr;
+      }
+
+      .diff-inputs {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      header {
+        padding: 14px 20px;
+        gap: 10px;
+      }
+
+      .subtitle {
+        display: none;
+      }
+
+      footer {
+        padding: 12px 20px;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<header>
-  <div class="logo">{ }</div>
-  <h1>JSON <span>Formatter</span></h1>
-  <span class="subtitle">NO BACKEND · 100% CLIENT-SIDE</span>
-</header>
+  <header>
+    <div class="logo">{ }</div>
+    <h1>JSON <span>Formatter</span></h1>
 
-<main>
-  <!-- INPUT -->
-  <div class="panel">
-    <div class="panel-header">
-      <span class="panel-label">Input</span>
-      <div class="panel-actions">
-        <button onclick="clearInput()">✕ Clear</button>
-        <button onclick="pasteFromClipboard()">⌘ Paste</button>
-        <button class="primary" onclick="convert()">▶ Convert</button>
-      </div>
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-formatter" onclick="switchTab('formatter')">⊞ Formatter</button>
+      <button class="tab-btn" id="tab-diff" onclick="switchTab('diff')">⇄ Diff</button>
     </div>
-    <textarea id="input" placeholder='Paste raw JSON string di sini...
+
+    <span class="subtitle">NO BACKEND · 100% CLIENT-SIDE</span>
+  </header>
+
+  <!-- ═══════════════════════════════════ FORMATTER VIEW ═══════════════════════════════════ -->
+  <div id="formatter-view" class="active">
+
+    <!-- INPUT -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Input</span>
+        <div class="panel-actions">
+          <button onclick="clearInput()">✕ Clear</button>
+          <button onclick="pasteFromClipboard()">⌘ Paste</button>
+          <button class="primary" onclick="convert()">▶ Convert</button>
+        </div>
+      </div>
+      <textarea id="input" placeholder='Paste raw JSON string di sini...
 
 Contoh:
-{\"key\":\"value\",\"list\":[{\"a\":1}]}
+{"key":"value","list":[{"a":1}]}
 
 Atau string yang ter-escape seperti:
-\"{\\\"billingAddress\\\":\\\"...\\\"}\"'></textarea>
-  </div>
+"{\"billingAddress\":\"...\"}"'></textarea>
+    </div>
 
-  <!-- OUTPUT -->
-  <div class="panel">
-    <div class="panel-header">
-      <span class="panel-label">Output · JSON</span>
-      <div class="panel-actions">
-        <button onclick="copyOutput()">⎘ Copy</button>
-        <button onclick="downloadJSON()">↓ Download</button>
+    <!-- OUTPUT -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Output · JSON</span>
+        <div class="panel-actions">
+          <button onclick="copyOutput()">⎘ Copy</button>
+          <button onclick="downloadJSON()">↓ Download</button>
+        </div>
+      </div>
+      <div id="output-area">
+        <div class="empty-state">
+          <div class="icon">{ }</div>
+          <div>Hasil akan muncul di sini</div>
+        </div>
       </div>
     </div>
-    <div id="output-area">
-      <div class="empty-state">
-        <div class="icon">{ }</div>
-        <div>Hasil akan muncul di sini</div>
+
+  </div><!-- end #formatter-view -->
+
+  <!-- ═══════════════════════════════════ DIFF VIEW ═══════════════════════════════════ -->
+  <div id="diff-view">
+
+    <!-- Two input panels -->
+    <div class="diff-inputs">
+
+      <!-- JSON A -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-label" style="color: var(--removed);">▶ JSON A</span>
+          <div class="panel-actions">
+            <button onclick="clearDiffA()">✕</button>
+            <button onclick="pasteDiffA()">⌘ Paste</button>
+            <button class="swap-btn" title="Swap A ↔ B" onclick="swapInputs()">⇄</button>
+          </div>
+        </div>
+        <textarea id="diff-input-a" class="diff-textarea"
+          placeholder='Paste JSON pertama (baseline) di sini...'></textarea>
+      </div>
+
+      <!-- JSON B -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-label" style="color: var(--added);">▶ JSON B</span>
+          <div class="panel-actions">
+            <button onclick="clearDiffB()">✕</button>
+            <button onclick="pasteDiffB()">⌘ Paste</button>
+            <button class="primary" onclick="runDiff()">⇄ Compare</button>
+          </div>
+        </div>
+        <textarea id="diff-input-b" class="diff-textarea"
+          placeholder='Paste JSON kedua (perbandingan) di sini...'></textarea>
+      </div>
+
+    </div><!-- end .diff-inputs -->
+
+    <!-- Diff Output -->
+    <div class="diff-output-wrap">
+      <div class="panel-header">
+        <span class="panel-label">Diff Output</span>
+        <div class="panel-actions" id="diff-output-actions" style="display:none">
+          <button onclick="copyDiffText()">⎘ Copy Diff</button>
+        </div>
+      </div>
+      <div id="diff-summary" class="diff-summary" style="display:none"></div>
+      <div id="diff-output">
+        <div class="empty-state">
+          <div class="icon">⇄</div>
+          <div>Masukkan dua JSON lalu klik Compare</div>
+        </div>
       </div>
     </div>
-  </div>
-</main>
 
-<footer>
-  <span>Drag & Drop file JSON juga didukung</span>
-  <span id="status"></span>
-</footer>
+  </div><!-- end #diff-view -->
 
-<div class="toast" id="toast"></div>
+  <footer>
+    <span id="footer-hint">Drag &amp; Drop file JSON juga didukung</span>
+    <span id="status"></span>
+    <span id="diff-status"></span>
+  </footer>
 
-<script>
-let parsedData = null;
+  <div class="toast" id="toast"></div>
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2000);
-}
+  <script>
+    // ════════════════════════════════════════
+    //  SHARED UTILITIES
+    // ════════════════════════════════════════
 
-function setStatus(msg, type) {
-  const s = document.getElementById('status');
-  s.textContent = msg;
-  s.className = type;
-}
+    let parsedData = null;
+    let currentTab = 'formatter';
 
-function tryParse(raw) {
-  raw = raw.trim();
-
-  // Strip trailing comma (common copy-paste artifact)
-  raw = raw.replace(/,\s*$/, '');
-
-  const attempts = [];
-
-  // Attempt 1: direct parse as-is
-  attempts.push(() => JSON.parse(raw));
-
-  // Attempt 2: strip surrounding single or double quotes
-  attempts.push(() => {
-    let s = raw;
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-      s = s.slice(1, -1);
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
     }
-    return JSON.parse(s);
-  });
 
-  // Attempt 3: strip quotes then unescape \"
-  attempts.push(() => {
-    let s = raw;
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-      s = s.slice(1, -1);
+    function setStatus(msg, type) {
+      const s = document.getElementById('status');
+      s.textContent = msg;
+      s.className = type;
     }
-    s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-    return JSON.parse(s);
-  });
 
-  // Attempt 4: treat entire raw as escaped JSON string value
-  // e.g. raw = {\"key\":\"val\"} => wrap as JSON string and parse twice
-  attempts.push(() => {
-    const wrapped = '"' + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
-    const inner = JSON.parse(wrapped);
-    return JSON.parse(inner);
-  });
-
-  // Attempt 5: raw already is an escaped string value (starts with \")
-  attempts.push(() => {
-    const wrapped = '"' + raw + '"';
-    const inner = JSON.parse(wrapped);
-    return JSON.parse(inner);
-  });
-
-  // Attempt 6: extract first JSON object or array from text
-  attempts.push(() => {
-    const match = raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-    if (!match) throw new Error('no match');
-    return JSON.parse(match[1]);
-  });
-
-  // Attempt 7: remove outer quotes, then extract JSON object/array
-  attempts.push(() => {
-    let s = raw;
-    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-      s = s.slice(1, -1);
+    function setDiffStatus(msg, type) {
+      const s = document.getElementById('diff-status');
+      s.textContent = msg;
+      s.className = type;
     }
-    s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-    const match = s.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-    if (!match) throw new Error('no match');
-    return JSON.parse(match[1]);
-  });
 
-  // Attempt 8: aggressive — replace all \" with " globally, strip outer quotes
-  attempts.push(() => {
-    let s = raw.replace(/^["']|["']$/g, '');
-    // replace escaped quotes
-    s = s.replace(/\\"/g, '"');
-    // fix double-escaped backslashes
-    s = s.replace(/\\\\/g, '\\');
-    return JSON.parse(s);
-  });
+    function esc(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
 
-  for (const attempt of attempts) {
-    try {
-      const result = attempt();
-      if (result !== null && result !== undefined) return result;
-    } catch(e) { /* try next */ }
-  }
+    // ════════════════════════════════════════
+    //  TAB SWITCHING
+    // ════════════════════════════════════════
+    function switchTab(tab) {
+      currentTab = tab;
+      document.getElementById('formatter-view').classList.toggle('active', tab === 'formatter');
+      document.getElementById('diff-view').classList.toggle('active', tab === 'diff');
+      document.getElementById('tab-formatter').classList.toggle('active', tab === 'formatter');
+      document.getElementById('tab-diff').classList.toggle('active', tab === 'diff');
 
-  throw new Error('Tidak dapat mem-parse input. Pastikan format valid.');
-}
+      // Show/hide status
+      document.getElementById('status').style.display = tab === 'formatter' ? '' : 'none';
+      document.getElementById('diff-status').style.display = tab === 'diff' ? '' : 'none';
+      document.getElementById('footer-hint').textContent = tab === 'diff'
+        ? 'Masukkan dua JSON lalu klik Compare'
+        : 'Drag & Drop file JSON juga didukung';
+    }
 
-function syntaxHighlight(json) {
-  return json.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|true|false|null|-?\d+\.?\d*([eE][+-]?\d+)?)/g, match => {
-    if (/^"/.test(match)) {
-      if (/:$/.test(match)) {
-        return `<span class="j-key">${esc(match)}</span>`;
+    // ════════════════════════════════════════
+    //  FORMATTER LOGIC
+    // ════════════════════════════════════════
+
+    function tryParse(raw) {
+      raw = raw.trim();
+      raw = raw.replace(/,\s*$/, '');
+
+      const attempts = [];
+      attempts.push(() => JSON.parse(raw));
+      attempts.push(() => {
+        let s = raw;
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
+        return JSON.parse(s);
+      });
+      attempts.push(() => {
+        let s = raw;
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
+        s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+        return JSON.parse(s);
+      });
+      attempts.push(() => {
+        const wrapped = '"' + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+        const inner = JSON.parse(wrapped);
+        return JSON.parse(inner);
+      });
+      attempts.push(() => {
+        const wrapped = '"' + raw + '"';
+        const inner = JSON.parse(wrapped);
+        return JSON.parse(inner);
+      });
+      attempts.push(() => {
+        const match = raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+        if (!match) throw new Error('no match');
+        return JSON.parse(match[1]);
+      });
+      attempts.push(() => {
+        let s = raw;
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
+        s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+        const match = s.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+        if (!match) throw new Error('no match');
+        return JSON.parse(match[1]);
+      });
+      attempts.push(() => {
+        let s = raw.replace(/^["']|["']$/g, '');
+        s = s.replace(/\\"/g, '"');
+        s = s.replace(/\\\\/g, '\\');
+        return JSON.parse(s);
+      });
+
+      for (const attempt of attempts) {
+        try {
+          const result = attempt();
+          if (result !== null && result !== undefined) return result;
+        } catch (e) { /* try next */ }
       }
-      return `<span class="j-str">${esc(match)}</span>`;
+      throw new Error('Tidak dapat mem-parse input. Pastikan format valid.');
     }
-    if (/true|false/.test(match)) return `<span class="j-bool">${match}</span>`;
-    if (/null/.test(match)) return `<span class="j-null">${match}</span>`;
-    return `<span class="j-num">${match}</span>`;
-  }).replace(/[{}\[\]]/g, b => `<span class="j-brk">${b}</span>`);
-}
 
-function esc(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+    function syntaxHighlightRaw(json) {
+      const escaped = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return escaped.replace(/(\"(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*\"(\s*:)?|true|false|null|-?\d+\.?\d*([eE][+-]?\d+)?)/g, match => {
+        if (/^"/.test(match)) {
+          if (/:$/.test(match)) return `<span class="j-key">${match}</span>`;
+          return `<span class="j-str">${match}</span>`;
+        }
+        if (/true|false/.test(match)) return `<span class="j-bool">${match}</span>`;
+        if (/null/.test(match)) return `<span class="j-null">${match}</span>`;
+        return `<span class="j-num">${match}</span>`;
+      }).replace(/(?<!["\\w])[{}\[\]](?!["\\w])/g, b => `<span class="j-brk">${b}</span>`);
+    }
 
-function convert() {
-  const raw = document.getElementById('input').value;
-  const out = document.getElementById('output-area');
+    function countKeys(obj, count = 0) {
+      if (typeof obj === 'object' && obj !== null) {
+        for (const k in obj) {
+          count++;
+          count = countKeys(obj[k], count);
+        }
+      }
+      return count;
+    }
 
-  if (!raw.trim()) {
-    out.innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Input kosong</div></div>';
-    setStatus('', '');
-    parsedData = null;
-    return;
-  }
-
-  try {
-    parsedData = tryParse(raw);
-    out.innerHTML = `<pre>${syntaxHighlightRaw(JSON.stringify(parsedData, null, 2))}</pre>`;
-    const keyCount = countKeys(parsedData);
-    setStatus(`✓ ${keyCount} keys · valid JSON`, 'ok');
-  } catch(e) {
-    const preview = s => s.substring(0, 100).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const codes = [...raw.substring(0,6)].map(c => `\\u${c.charCodeAt(0).toString(16).padStart(4,'0')}`).join(' ');
-    out.innerHTML = `
+    function convert() {
+      const raw = document.getElementById('input').value;
+      const out = document.getElementById('output-area');
+      if (!raw.trim()) {
+        out.innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Input kosong</div></div>';
+        setStatus('', '');
+        parsedData = null;
+        return;
+      }
+      try {
+        parsedData = tryParse(raw);
+        out.innerHTML = `<pre>${syntaxHighlightRaw(JSON.stringify(parsedData, null, 2))}</pre>`;
+        const keyCount = countKeys(parsedData);
+        setStatus(`✓ ${keyCount} keys · valid JSON`, 'ok');
+      } catch (e) {
+        const preview = s => s.substring(0, 100).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const codes = [...raw.substring(0, 6)].map(c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`).join(' ');
+        out.innerHTML = `
       <div class="error-msg">
         ⚠ Gagal mem-parse input.<br><br>
         <b>Debug:</b><br>
@@ -468,87 +879,342 @@ function convert() {
         — Coba hapus koma (,) di akhir jika ada<br>
         — Jika string dalam tanda kutip satu ('), ganti dulu ke kutip dua (")
       </div>`;
-    setStatus('✗ Parse error', 'err');
-    parsedData = null;
-  }
-}
-
-function syntaxHighlightRaw(json) {
-  const escaped = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  return escaped.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|true|false|null|-?\d+\.?\d*([eE][+-]?\d+)?)/g, match => {
-    if (/^"/.test(match)) {
-      if (/:$/.test(match)) return `<span class="j-key">${match}</span>`;
-      return `<span class="j-str">${match}</span>`;
+        setStatus('✗ Parse error', 'err');
+        parsedData = null;
+      }
     }
-    if (/true|false/.test(match)) return `<span class="j-bool">${match}</span>`;
-    if (/null/.test(match)) return `<span class="j-null">${match}</span>`;
-    return `<span class="j-num">${match}</span>`;
-  }).replace(/(?<!["\w])[{}\[\]](?!["\w])/g, b => `<span class="j-brk">${b}</span>`);
-}
 
-function countKeys(obj, count = 0) {
-  if (typeof obj === 'object' && obj !== null) {
-    for (const k in obj) {
-      count++;
-      count = countKeys(obj[k], count);
+    function copyOutput() {
+      if (!parsedData) { showToast('Tidak ada output untuk di-copy'); return; }
+      navigator.clipboard.writeText(JSON.stringify(parsedData, null, 2))
+        .then(() => showToast('✓ Copied to clipboard!'))
+        .catch(() => showToast('Gagal copy'));
     }
-  }
-  return count;
-}
 
-function copyOutput() {
-  if (!parsedData) { showToast('Tidak ada output untuk di-copy'); return; }
-  navigator.clipboard.writeText(JSON.stringify(parsedData, null, 2))
-    .then(() => showToast('✓ Copied to clipboard!'))
-    .catch(() => showToast('Gagal copy'));
-}
+    function downloadJSON() {
+      if (!parsedData) { showToast('Tidak ada data untuk didownload'); return; }
+      const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'output.json';
+      a.click();
+      showToast('✓ Download dimulai!');
+    }
 
-function downloadJSON() {
-  if (!parsedData) { showToast('Tidak ada data untuk didownload'); return; }
-  const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'output.json';
-  a.click();
-  showToast('✓ Download dimulai!');
-}
+    function clearInput() {
+      document.getElementById('input').value = '';
+      document.getElementById('output-area').innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Hasil akan muncul di sini</div></div>';
+      setStatus('', '');
+      parsedData = null;
+    }
 
-function clearInput() {
-  document.getElementById('input').value = '';
-  document.getElementById('output-area').innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Hasil akan muncul di sini</div></div>';
-  setStatus('', '');
-  parsedData = null;
-}
+    async function pasteFromClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById('input').value = text;
+        showToast('✓ Pasted!');
+      } catch (e) {
+        showToast('Izin clipboard ditolak');
+      }
+    }
 
-async function pasteFromClipboard() {
-  try {
-    const text = await navigator.clipboard.readText();
-    document.getElementById('input').value = text;
-    showToast('✓ Pasted!');
-  } catch(e) {
-    showToast('Izin clipboard ditolak');
-  }
-}
+    // ════════════════════════════════════════
+    //  DIFF ENGINE
+    // ════════════════════════════════════════
 
-// Auto-convert on Ctrl+Enter
-document.getElementById('input').addEventListener('keydown', e => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') convert();
-});
+    /**
+     * Recursively diff two JSON values.
+     * Returns array of diff entries: { path, type, oldVal, newVal }
+     */
+    function diffJSON(a, b, path = '') {
+      const results = [];
 
-// Drag & drop file
-document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop', e => {
-  e.preventDefault();
-  const file = e.dataTransfer.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    document.getElementById('input').value = ev.target.result;
-    convert();
-  };
-  reader.readAsText(file);
-  showToast(`📂 ${file.name} dimuat`);
-});
-</script>
+      const typeA = getType(a);
+      const typeB = getType(b);
+
+      // Both are plain objects — recurse
+      if (typeA === 'object' && typeB === 'object') {
+        const keysA = Object.keys(a);
+        const keysB = Object.keys(b);
+        const allKeys = new Set([...keysA, ...keysB]);
+
+        for (const key of allKeys) {
+          const childPath = path ? `${path}.${key}` : key;
+          if (!(key in a)) {
+            // Key exists only in B → added
+            collectAll(b[key], childPath, 'added', results);
+          } else if (!(key in b)) {
+            // Key exists only in A → removed
+            collectAll(a[key], childPath, 'removed', results);
+          } else {
+            // Key in both → recurse or compare
+            const sub = diffJSON(a[key], b[key], childPath);
+            results.push(...sub);
+          }
+        }
+
+        // Both are arrays — diff by index
+      } else if (typeA === 'array' && typeB === 'array') {
+        const maxLen = Math.max(a.length, b.length);
+        for (let i = 0; i < maxLen; i++) {
+          const childPath = `${path}[${i}]`;
+          if (i >= a.length) {
+            collectAll(b[i], childPath, 'added', results);
+          } else if (i >= b.length) {
+            collectAll(a[i], childPath, 'removed', results);
+          } else {
+            const sub = diffJSON(a[i], b[i], childPath);
+            results.push(...sub);
+          }
+        }
+
+        // Primitive comparison
+      } else {
+        const aStr = JSON.stringify(a);
+        const bStr = JSON.stringify(b);
+        if (aStr !== bStr) {
+          results.push({ path, type: 'changed', oldVal: a, newVal: b });
+        }
+        // identical → nothing pushed
+      }
+
+      return results;
+    }
+
+    function getType(val) {
+      if (val === null) return 'null';
+      if (Array.isArray(val)) return 'array';
+      if (typeof val === 'object') return 'object';
+      return 'primitive';
+    }
+
+    /** Flatten all leaf paths of a value with a given type (added/removed) */
+    function collectAll(val, path, type, results) {
+      const t = getType(val);
+      if (t === 'object') {
+        for (const key of Object.keys(val)) {
+          collectAll(val[key], `${path}.${key}`, type, results);
+        }
+      } else if (t === 'array') {
+        val.forEach((item, i) => collectAll(item, `${path}[${i}]`, type, results));
+      } else {
+        // leaf
+        if (type === 'added') results.push({ path, type: 'added', newVal: val });
+        if (type === 'removed') results.push({ path, type: 'removed', oldVal: val });
+      }
+    }
+
+    // ────────────────────────────────────────
+    //  DIFF RENDER
+    // ────────────────────────────────────────
+
+    let lastDiffs = [];
+
+    function renderDiffVal(val) {
+      if (val === null) return `<span style="color:var(--null)">null</span>`;
+      if (typeof val === 'boolean') return `<span style="color:var(--bool)">${val}</span>`;
+      if (typeof val === 'number') return `<span style="color:var(--number)">${val}</span>`;
+      return `<span style="color:var(--string)">${esc(JSON.stringify(val))}</span>`;
+    }
+
+    function runDiff() {
+      const rawA = document.getElementById('diff-input-a').value;
+      const rawB = document.getElementById('diff-input-b').value;
+      const out = document.getElementById('diff-output');
+      const summaryEl = document.getElementById('diff-summary');
+      const actionsEl = document.getElementById('diff-output-actions');
+
+      if (!rawA.trim() || !rawB.trim()) {
+        out.innerHTML = '<div class="empty-state"><div class="icon">⇄</div><div>Kedua input harus diisi</div></div>';
+        summaryEl.style.display = 'none';
+        actionsEl.style.display = 'none';
+        setDiffStatus('', '');
+        return;
+      }
+
+      let objA, objB;
+      try { objA = tryParse(rawA); } catch (e) {
+        out.innerHTML = `<div class="error-msg">⚠ JSON A tidak valid: ${esc(e.message)}</div>`;
+        summaryEl.style.display = 'none';
+        actionsEl.style.display = 'none';
+        setDiffStatus('✗ JSON A error', 'err');
+        return;
+      }
+      try { objB = tryParse(rawB); } catch (e) {
+        out.innerHTML = `<div class="error-msg">⚠ JSON B tidak valid: ${esc(e.message)}</div>`;
+        summaryEl.style.display = 'none';
+        actionsEl.style.display = 'none';
+        setDiffStatus('✗ JSON B error', 'err');
+        return;
+      }
+
+      const diffs = diffJSON(objA, objB);
+      lastDiffs = diffs;
+
+      const added = diffs.filter(d => d.type === 'added').length;
+      const removed = diffs.filter(d => d.type === 'removed').length;
+      const changed = diffs.filter(d => d.type === 'changed').length;
+      const totalKeysA = countKeys(objA);
+      const identical = totalKeysA - removed - changed;
+
+      // Summary bar
+      summaryEl.style.display = 'flex';
+      summaryEl.innerHTML = `
+    <span class="badge added">  ＋ ${added} added</span>
+    <span class="badge removed">− ${removed} removed</span>
+    <span class="badge changed">~ ${changed} changed</span>
+    <span class="badge identical">= ${Math.max(0, identical)} identical</span>
+  `;
+
+      if (diffs.length === 0) {
+        out.innerHTML = `<div class="empty-state"><div class="icon" style="font-size:28px;opacity:0.6">✓</div><div style="color:var(--accent)">JSON identik — tidak ada perbedaan</div></div>`;
+        setDiffStatus('✓ Identical', 'ok');
+        actionsEl.style.display = 'none';
+        return;
+      }
+
+      // Group by type for display
+      const addedDiffs = diffs.filter(d => d.type === 'added');
+      const removedDiffs = diffs.filter(d => d.type === 'removed');
+      const changedDiffs = diffs.filter(d => d.type === 'changed');
+
+      let html = '';
+
+      if (changedDiffs.length) {
+        html += `<div class="diff-section-label">~ Changed (${changedDiffs.length})</div>`;
+        changedDiffs.forEach(d => {
+          html += `
+        <div class="diff-entry changed">
+          <span class="diff-sign">~</span>
+          <span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span>
+          <span class="diff-value">
+            <span class="diff-old">${renderDiffVal(d.oldVal)}</span>
+            <span class="diff-arrow"> → </span>
+            <span class="diff-new">${renderDiffVal(d.newVal)}</span>
+          </span>
+        </div>`;
+        });
+      }
+
+      if (addedDiffs.length) {
+        html += `<div class="diff-section-label">＋ Added (${addedDiffs.length})</div>`;
+        addedDiffs.forEach(d => {
+          html += `
+        <div class="diff-entry added">
+          <span class="diff-sign">+</span>
+          <span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span>
+          <span class="diff-value">${renderDiffVal(d.newVal)}</span>
+        </div>`;
+        });
+      }
+
+      if (removedDiffs.length) {
+        html += `<div class="diff-section-label">− Removed (${removedDiffs.length})</div>`;
+        removedDiffs.forEach(d => {
+          html += `
+        <div class="diff-entry removed">
+          <span class="diff-sign">−</span>
+          <span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span>
+          <span class="diff-value">${renderDiffVal(d.oldVal)}</span>
+        </div>`;
+        });
+      }
+
+      out.innerHTML = html;
+      actionsEl.style.display = 'flex';
+
+      const total = added + removed + changed;
+      setDiffStatus(`⇄ ${total} difference${total !== 1 ? 's' : ''} found`, total > 0 ? 'err' : 'ok');
+    }
+
+    // ────────────────────────────────────────
+    //  DIFF CONTROLS
+    // ────────────────────────────────────────
+
+    function clearDiffA() {
+      document.getElementById('diff-input-a').value = '';
+    }
+
+    function clearDiffB() {
+      document.getElementById('diff-input-b').value = '';
+    }
+
+    async function pasteDiffA() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById('diff-input-a').value = text;
+        showToast('✓ Pasted to JSON A');
+      } catch (e) { showToast('Izin clipboard ditolak'); }
+    }
+
+    async function pasteDiffB() {
+      try {
+        const text = await navigator.clipboard.readText();
+        document.getElementById('diff-input-b').value = text;
+        showToast('✓ Pasted to JSON B');
+      } catch (e) { showToast('Izin clipboard ditolak'); }
+    }
+
+    function swapInputs() {
+      const a = document.getElementById('diff-input-a');
+      const b = document.getElementById('diff-input-b');
+      const tmp = a.value;
+      a.value = b.value;
+      b.value = tmp;
+      showToast('✓ JSON A ↔ B ditukar');
+    }
+
+    function copyDiffText() {
+      if (!lastDiffs.length) { showToast('Tidak ada diff'); return; }
+      const lines = lastDiffs.map(d => {
+        if (d.type === 'added') return `+ ${d.path}: ${JSON.stringify(d.newVal)}`;
+        if (d.type === 'removed') return `- ${d.path}: ${JSON.stringify(d.oldVal)}`;
+        if (d.type === 'changed') return `~ ${d.path}: ${JSON.stringify(d.oldVal)} → ${JSON.stringify(d.newVal)}`;
+        return '';
+      });
+      navigator.clipboard.writeText(lines.join('\n'))
+        .then(() => showToast('✓ Diff copied!'))
+        .catch(() => showToast('Gagal copy'));
+    }
+
+    // ════════════════════════════════════════
+    //  KEYBOARD SHORTCUTS
+    // ════════════════════════════════════════
+
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'Enter') {
+          if (currentTab === 'formatter') convert();
+          else runDiff();
+        }
+      }
+    });
+
+    // ════════════════════════════════════════
+    //  DRAG & DROP (formatter mode)
+    // ════════════════════════════════════════
+    document.addEventListener('dragover', e => e.preventDefault());
+    document.addEventListener('drop', e => {
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        if (currentTab === 'formatter') {
+          document.getElementById('input').value = ev.target.result;
+          convert();
+        } else {
+          // drop to whichever area
+          document.getElementById('diff-input-a').value = ev.target.result;
+        }
+      };
+      reader.readAsText(file);
+      showToast(`📂 ${file.name} dimuat`);
+    });
+
+    // init status visibility
+    document.getElementById('diff-status').style.display = 'none';
+  </script>
 </body>
+
 </html>
