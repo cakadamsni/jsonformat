@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JSON Formatter & Diff</title>
+  <title>JSON Formatter, Diff & Snippets</title>
   <link
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap"
     rel="stylesheet">
@@ -19,22 +19,18 @@
       --text: #e8eaf0;
       --muted: #5a6080;
       --error: #ff4d6a;
-
-      /* syntax colors */
       --key: #79b8ff;
       --string: #9ecbff;
       --number: #f8c555;
       --bool: #ff9f7f;
       --null: #ff4d6a;
       --bracket: #888faa;
-
-      /* diff colors */
       --added: #00e5a0;
-      --added-bg: rgba(0, 229, 160, 0.08);
+      --added-bg: rgba(0, 229, 160, .08);
       --removed: #ff4d6a;
-      --removed-bg: rgba(255, 77, 106, 0.08);
+      --removed-bg: rgba(255, 77, 106, .08);
       --changed: #f8c555;
-      --changed-bg: rgba(248, 197, 85, 0.08);
+      --changed-bg: rgba(248, 197, 85, .08);
       --identical: #5a6080;
     }
 
@@ -53,7 +49,6 @@
       flex-direction: column;
     }
 
-    /* noise overlay */
     body::before {
       content: '';
       position: fixed;
@@ -63,14 +58,15 @@
       z-index: 0;
     }
 
+    /* HEADER */
     header {
-      padding: 20px 40px 16px;
+      padding: 18px 40px 14px;
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
       position: relative;
-      z-index: 1;
+      z-index: 10;
       flex-wrap: wrap;
     }
 
@@ -89,14 +85,13 @@
     h1 {
       font-size: 22px;
       font-weight: 800;
-      letter-spacing: -0.5px;
+      letter-spacing: -.5px;
     }
 
     h1 span {
       color: var(--accent);
     }
 
-    /* Tab toggle */
     .tabs {
       display: flex;
       gap: 4px;
@@ -104,21 +99,21 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 4px;
-      margin-left: 16px;
+      margin-left: 12px;
     }
 
     .tab-btn {
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px;
       font-weight: 700;
-      padding: 6px 18px;
+      padding: 6px 16px;
       border: none;
       border-radius: 6px;
       background: transparent;
       color: var(--muted);
       cursor: pointer;
-      transition: all 0.18s;
-      letter-spacing: 0.5px;
+      transition: all .18s;
+      letter-spacing: .5px;
       white-space: nowrap;
     }
 
@@ -136,7 +131,22 @@
     .tab-btn.active:hover {
       background: #00ffb3;
       color: #000;
-      border-color: transparent;
+    }
+
+    .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #fff2;
+      border-radius: 999px;
+      font-size: 9px;
+      padding: 1px 5px;
+      margin-left: 4px;
+      min-width: 16px;
+    }
+
+    .tab-btn.active .tab-badge {
+      background: rgba(0, 0, 0, .2);
     }
 
     .subtitle {
@@ -147,16 +157,19 @@
       letter-spacing: 1px;
     }
 
-    /* ─── FORMATTER MODE ─── */
+    /* VIEWS */
     #formatter-view {
       flex: 1;
-      display: grid;
+      display: none;
       grid-template-columns: 1fr 1fr;
       position: relative;
       z-index: 1;
     }
 
-    /* ─── DIFF MODE ─── */
+    #formatter-view.active {
+      display: grid;
+    }
+
     #diff-view {
       flex: 1;
       display: none;
@@ -169,25 +182,20 @@
       display: flex;
     }
 
-    #formatter-view.active {
-      display: grid;
-    }
-
-    .diff-inputs {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      border-bottom: 1px solid var(--border);
-      height: 260px;
-    }
-
-    .diff-output-wrap {
+    #snippets-view {
       flex: 1;
-      display: flex;
-      flex-direction: column;
+      display: none;
+      flex-direction: row;
+      position: relative;
+      z-index: 1;
       overflow: hidden;
     }
 
-    /* ─── SHARED PANEL STYLES ─── */
+    #snippets-view.active {
+      display: flex;
+    }
+
+    /* PANELS */
     .panel {
       display: flex;
       flex-direction: column;
@@ -233,7 +241,7 @@
       background: var(--surface2);
       color: var(--text);
       cursor: pointer;
-      transition: all 0.15s;
+      transition: all .15s;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -263,6 +271,10 @@
       color: var(--removed);
     }
 
+    button.icon-btn {
+      padding: 6px 10px;
+    }
+
     textarea {
       flex: 1;
       background: var(--surface);
@@ -277,13 +289,13 @@
       min-height: 500px;
     }
 
-    .diff-textarea {
-      min-height: unset;
-      height: 100%;
-    }
-
     textarea::placeholder {
       color: var(--muted);
+    }
+
+    textarea.diff-ta {
+      min-height: unset;
+      height: 100%;
     }
 
     #output-area {
@@ -302,7 +314,21 @@
       word-break: break-all;
     }
 
-    /* ─── DIFF OUTPUT ─── */
+    /* DIFF */
+    .diff-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid var(--border);
+      height: 260px;
+    }
+
+    .diff-output-wrap {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     #diff-output {
       flex: 1;
       background: var(--surface);
@@ -422,10 +448,6 @@
       color: var(--added);
     }
 
-    .diff-val {
-      color: var(--string);
-    }
-
     .diff-section-label {
       font-size: 10px;
       letter-spacing: 2px;
@@ -435,7 +457,299 @@
       font-weight: 700;
     }
 
-    /* Syntax highlight */
+    .swap-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+
+    .swap-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: rotate(180deg);
+    }
+
+    /* SNIPPETS VIEW */
+    .snip-sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+
+    .snip-sidebar-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .snip-search {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 7px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .snip-search:focus {
+      border-color: var(--accent);
+    }
+
+    .snip-search::placeholder {
+      color: var(--muted);
+    }
+
+    .snip-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .snip-section-title {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+      padding: 10px 8px 4px;
+    }
+
+    .snip-card {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all .15s;
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+    }
+
+    .snip-card:hover {
+      background: var(--surface2);
+      border-color: var(--border);
+    }
+
+    .snip-card.selected {
+      background: var(--surface2);
+      border-color: var(--accent);
+    }
+
+    .snip-card-name {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .snip-card-preview {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .snip-card-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 4px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .snip-source-badge {
+      font-size: 8px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-weight: 700;
+      letter-spacing: .5px;
+    }
+
+    .snip-source-badge.formatter {
+      background: rgba(0, 136, 255, .15);
+      color: var(--accent2);
+    }
+
+    .snip-source-badge.diff-a {
+      background: rgba(255, 77, 106, .12);
+      color: var(--removed);
+    }
+
+    .snip-source-badge.diff-b {
+      background: rgba(0, 229, 160, .12);
+      color: var(--added);
+    }
+
+    .snip-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .snip-empty .ei {
+      font-size: 28px;
+      opacity: .3;
+    }
+
+    /* Snippet Preview pane */
+    .snip-preview {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .snip-preview-header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .snip-preview-title {
+      font-size: 13px;
+      font-weight: 700;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .snip-preview-body {
+      flex: 1;
+      overflow: auto;
+      padding: 20px;
+      background: var(--surface);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+    }
+
+    .snip-preview-body pre {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .snip-no-sel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      gap: 10px;
+    }
+
+    .snip-no-sel .icon {
+      font-size: 32px;
+      opacity: .25;
+    }
+
+    .snip-preview-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .65);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .5);
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .modal-label {
+      font-size: 11px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 6px;
+    }
+
+    .modal-input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .modal-input:focus {
+      border-color: var(--accent);
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    /* Syntax */
     .j-key {
       color: var(--key);
     }
@@ -465,7 +779,7 @@
       font-family: 'JetBrains Mono', monospace;
       font-size: 12px;
       padding: 16px 20px;
-      background: rgba(255, 77, 106, 0.08);
+      background: rgba(255, 77, 106, .08);
       border-left: 3px solid var(--error);
       margin: 20px;
       border-radius: 4px;
@@ -485,7 +799,7 @@
 
     .empty-state .icon {
       font-size: 36px;
-      opacity: 0.3;
+      opacity: .3;
     }
 
     footer {
@@ -513,10 +827,6 @@
       color: var(--error);
     }
 
-    #diff-status {
-      margin-left: auto;
-    }
-
     #diff-status.ok {
       color: var(--accent);
     }
@@ -538,9 +848,9 @@
       border-radius: 8px;
       opacity: 0;
       transform: translateY(10px);
-      transition: all 0.2s;
+      transition: all .2s;
       pointer-events: none;
-      z-index: 999;
+      z-index: 9999;
     }
 
     .toast.show {
@@ -548,30 +858,7 @@
       transform: translateY(0);
     }
 
-    /* Swap button special */
-    .swap-btn {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 50%;
-      width: 32px;
-      height: 32px;
-      padding: 0;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
-
-    .swap-btn:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      transform: rotate(180deg);
-    }
-
-    @media (max-width: 768px) {
+    @media(max-width:768px) {
       #formatter-view {
         grid-template-columns: 1fr;
       }
@@ -579,6 +866,17 @@
       .diff-inputs {
         grid-template-columns: 1fr;
         height: auto;
+      }
+
+      #snippets-view {
+        flex-direction: column;
+      }
+
+      .snip-sidebar {
+        width: 100%;
+        height: 280px;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
       }
 
       header {
@@ -602,19 +900,17 @@
   <header>
     <div class="logo">{ }</div>
     <h1>JSON <span>Formatter</span></h1>
-
     <div class="tabs">
       <button class="tab-btn active" id="tab-formatter" onclick="switchTab('formatter')">⊞ Formatter</button>
       <button class="tab-btn" id="tab-diff" onclick="switchTab('diff')">⇄ Diff</button>
+      <button class="tab-btn" id="tab-snippets" onclick="switchTab('snippets')">🗂 Snippets<span class="tab-badge"
+          id="snip-badge">0</span></button>
     </div>
-
     <span class="subtitle">NO BACKEND · 100% CLIENT-SIDE</span>
   </header>
 
-  <!-- ═══════════════════════════════════ FORMATTER VIEW ═══════════════════════════════════ -->
+  <!-- ══ FORMATTER ══ -->
   <div id="formatter-view" class="active">
-
-    <!-- INPUT -->
     <div class="panel">
       <div class="panel-header">
         <span class="panel-label">Input</span>
@@ -632,14 +928,13 @@ Contoh:
 Atau string yang ter-escape seperti:
 "{\"billingAddress\":\"...\"}"'></textarea>
     </div>
-
-    <!-- OUTPUT -->
     <div class="panel">
       <div class="panel-header">
         <span class="panel-label">Output · JSON</span>
         <div class="panel-actions">
           <button onclick="copyOutput()">⎘ Copy</button>
           <button onclick="downloadJSON()">↓ Download</button>
+          <button onclick="openSaveModal('formatter')" title="Save as Snippet">📌 Save</button>
         </div>
       </div>
       <div id="output-area">
@@ -649,46 +944,36 @@ Atau string yang ter-escape seperti:
         </div>
       </div>
     </div>
+  </div>
 
-  </div><!-- end #formatter-view -->
-
-  <!-- ═══════════════════════════════════ DIFF VIEW ═══════════════════════════════════ -->
+  <!-- ══ DIFF ══ -->
   <div id="diff-view">
-
-    <!-- Two input panels -->
     <div class="diff-inputs">
-
-      <!-- JSON A -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-label" style="color: var(--removed);">▶ JSON A</span>
+          <span class="panel-label" style="color:var(--removed);">▶ JSON A</span>
           <div class="panel-actions">
             <button onclick="clearDiffA()">✕</button>
             <button onclick="pasteDiffA()">⌘ Paste</button>
+            <button onclick="openSaveModal('diff-a')" title="Save JSON A as Snippet">📌</button>
             <button class="swap-btn" title="Swap A ↔ B" onclick="swapInputs()">⇄</button>
           </div>
         </div>
-        <textarea id="diff-input-a" class="diff-textarea"
-          placeholder='Paste JSON pertama (baseline) di sini...'></textarea>
+        <textarea id="diff-input-a" class="diff-ta" placeholder='Paste JSON pertama (baseline)...'></textarea>
       </div>
-
-      <!-- JSON B -->
       <div class="panel">
         <div class="panel-header">
-          <span class="panel-label" style="color: var(--added);">▶ JSON B</span>
+          <span class="panel-label" style="color:var(--added);">▶ JSON B</span>
           <div class="panel-actions">
             <button onclick="clearDiffB()">✕</button>
             <button onclick="pasteDiffB()">⌘ Paste</button>
+            <button onclick="openSaveModal('diff-b')" title="Save JSON B as Snippet">📌</button>
             <button class="primary" onclick="runDiff()">⇄ Compare</button>
           </div>
         </div>
-        <textarea id="diff-input-b" class="diff-textarea"
-          placeholder='Paste JSON kedua (perbandingan) di sini...'></textarea>
+        <textarea id="diff-input-b" class="diff-ta" placeholder='Paste JSON kedua (perbandingan)...'></textarea>
       </div>
-
-    </div><!-- end .diff-inputs -->
-
-    <!-- Diff Output -->
+    </div>
     <div class="diff-output-wrap">
       <div class="panel-header">
         <span class="panel-label">Diff Output</span>
@@ -704,516 +989,446 @@ Atau string yang ter-escape seperti:
         </div>
       </div>
     </div>
+  </div>
 
-  </div><!-- end #diff-view -->
+  <!-- ══ SNIPPETS ══ -->
+  <div id="snippets-view">
+    <div class="snip-sidebar">
+      <div class="snip-sidebar-header">
+        <input type="text" id="snip-search" class="snip-search" placeholder="🔍  Cari snippet..."
+          oninput="renderSnipList()">
+      </div>
+      <div class="snip-list" id="snip-list"></div>
+    </div>
+    <div class="snip-preview">
+      <div class="snip-preview-header" id="snip-preview-header" style="display:none">
+        <span class="snip-preview-title" id="snip-preview-title"></span>
+        <div class="snip-preview-actions" id="snip-preview-actions"></div>
+      </div>
+      <div class="snip-preview-body" id="snip-preview-body">
+        <div class="snip-no-sel">
+          <div class="icon">🗂</div>
+          <div>Pilih snippet dari daftar untuk preview</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SAVE MODAL ══ -->
+  <div class="modal-overlay" id="save-modal">
+    <div class="modal-box">
+      <div class="modal-title">📌 Save Snippet</div>
+      <div>
+        <div class="modal-label">NAMA SNIPPET</div>
+        <input type="text" id="modal-name" class="modal-input" placeholder="cth: Order API Response v2" maxlength="60">
+      </div>
+      <div class="modal-actions">
+        <button onclick="closeSaveModal()">Batal</button>
+        <button class="primary" onclick="confirmSave()">✓ Simpan</button>
+      </div>
+    </div>
+  </div>
 
   <footer>
     <span id="footer-hint">Drag &amp; Drop file JSON juga didukung</span>
     <span id="status"></span>
     <span id="diff-status"></span>
   </footer>
-
   <div class="toast" id="toast"></div>
 
   <script>
-    // ════════════════════════════════════════
-    //  SHARED UTILITIES
-    // ════════════════════════════════════════
-
+    // ═══════════════════════════════════════════
+    //  UTILITIES
+    // ═══════════════════════════════════════════
     let parsedData = null;
     let currentTab = 'formatter';
 
     function showToast(msg) {
       const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2000);
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
     }
-
     function setStatus(msg, type) {
       const s = document.getElementById('status');
-      s.textContent = msg;
-      s.className = type;
+      s.textContent = msg; s.className = type;
     }
-
     function setDiffStatus(msg, type) {
       const s = document.getElementById('diff-status');
-      s.textContent = msg;
-      s.className = type;
+      s.textContent = msg; s.className = type;
     }
-
     function esc(s) {
       return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2);
+    }
+    function fmtDate(iso) {
+      const d = new Date(iso);
+      return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) + ' ' +
+        d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    }
 
-    // ════════════════════════════════════════
+    // ═══════════════════════════════════════════
     //  TAB SWITCHING
-    // ════════════════════════════════════════
+    // ═══════════════════════════════════════════
     function switchTab(tab) {
       currentTab = tab;
-      document.getElementById('formatter-view').classList.toggle('active', tab === 'formatter');
-      document.getElementById('diff-view').classList.toggle('active', tab === 'diff');
-      document.getElementById('tab-formatter').classList.toggle('active', tab === 'formatter');
-      document.getElementById('tab-diff').classList.toggle('active', tab === 'diff');
-
-      // Show/hide status
+      ['formatter', 'diff', 'snippets'].forEach(t => {
+        document.getElementById(t + '-view').classList.toggle('active', t === tab);
+        document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+      });
       document.getElementById('status').style.display = tab === 'formatter' ? '' : 'none';
       document.getElementById('diff-status').style.display = tab === 'diff' ? '' : 'none';
-      document.getElementById('footer-hint').textContent = tab === 'diff'
-        ? 'Masukkan dua JSON lalu klik Compare'
-        : 'Drag & Drop file JSON juga didukung';
+      const hints = { formatter: 'Drag & Drop file JSON juga didukung', diff: 'Masukkan dua JSON lalu klik Compare', snippets: 'Snippet tersimpan di browser — tidak dikirim ke server' };
+      document.getElementById('footer-hint').textContent = hints[tab];
+      if (tab === 'snippets') renderSnipList();
     }
 
-    // ════════════════════════════════════════
-    //  FORMATTER LOGIC
-    // ════════════════════════════════════════
-
+    // ═══════════════════════════════════════════
+    //  JSON PARSER
+    // ═══════════════════════════════════════════
     function tryParse(raw) {
-      raw = raw.trim();
-      raw = raw.replace(/,\s*$/, '');
-
-      const attempts = [];
-      attempts.push(() => JSON.parse(raw));
-      attempts.push(() => {
-        let s = raw;
-        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
-        return JSON.parse(s);
-      });
-      attempts.push(() => {
-        let s = raw;
-        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
-        s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-        return JSON.parse(s);
-      });
-      attempts.push(() => {
-        const wrapped = '"' + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
-        const inner = JSON.parse(wrapped);
-        return JSON.parse(inner);
-      });
-      attempts.push(() => {
-        const wrapped = '"' + raw + '"';
-        const inner = JSON.parse(wrapped);
-        return JSON.parse(inner);
-      });
-      attempts.push(() => {
-        const match = raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-        if (!match) throw new Error('no match');
-        return JSON.parse(match[1]);
-      });
-      attempts.push(() => {
-        let s = raw;
-        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1);
-        s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-        const match = s.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-        if (!match) throw new Error('no match');
-        return JSON.parse(match[1]);
-      });
-      attempts.push(() => {
-        let s = raw.replace(/^["']|["']$/g, '');
-        s = s.replace(/\\"/g, '"');
-        s = s.replace(/\\\\/g, '\\');
-        return JSON.parse(s);
-      });
-
-      for (const attempt of attempts) {
-        try {
-          const result = attempt();
-          if (result !== null && result !== undefined) return result;
-        } catch (e) { /* try next */ }
-      }
-      throw new Error('Tidak dapat mem-parse input. Pastikan format valid.');
+      raw = raw.trim().replace(/,\s*$/, '');
+      const attempts = [
+        () => JSON.parse(raw),
+        () => { let s = raw; if ((s[0] === '"' && s.slice(-1) === '"') || (s[0] === "'" && s.slice(-1) === "'")) s = s.slice(1, -1); return JSON.parse(s); },
+        () => { let s = raw; if ((s[0] === '"' && s.slice(-1) === '"') || (s[0] === "'" && s.slice(-1) === "'")) s = s.slice(1, -1); s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\'); return JSON.parse(s); },
+        () => { const w = '"' + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"'; return JSON.parse(JSON.parse(w)); },
+        () => { return JSON.parse(JSON.parse('"' + raw + '"')); },
+        () => { const m = raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/); if (!m) throw 0; return JSON.parse(m[1]); },
+        () => { let s = raw.replace(/^["']|["']$/g, '').replace(/\\"/g, '"').replace(/\\\\/g, '\\'); const m = s.match(/(\{[\s\S]*\}|\[[\s\S]*\])/); if (!m) throw 0; return JSON.parse(m[1]); },
+        () => { let s = raw.replace(/^["']|["']$/g, '').replace(/\\"/g, '"').replace(/\\\\/g, '\\'); return JSON.parse(s); }
+      ];
+      for (const fn of attempts) { try { const r = fn(); if (r != null) return r; } catch (e) { } }
+      throw new Error('Tidak dapat mem-parse input.');
     }
 
-    function syntaxHighlightRaw(json) {
-      const escaped = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      return escaped.replace(/(\"(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*\"(\s*:)?|true|false|null|-?\d+\.?\d*([eE][+-]?\d+)?)/g, match => {
-        if (/^"/.test(match)) {
-          if (/:$/.test(match)) return `<span class="j-key">${match}</span>`;
-          return `<span class="j-str">${match}</span>`;
-        }
-        if (/true|false/.test(match)) return `<span class="j-bool">${match}</span>`;
-        if (/null/.test(match)) return `<span class="j-null">${match}</span>`;
-        return `<span class="j-num">${match}</span>`;
+    function syntaxHL(json) {
+      const e = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return e.replace(/(\"(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*\"(\s*:)?|true|false|null|-?\d+\.?\d*([eE][+-]?\d+)?)/g, m => {
+        if (/^"/.test(m)) return /:$/.test(m) ? `<span class="j-key">${m}</span>` : `<span class="j-str">${m}</span>`;
+        if (/true|false/.test(m)) return `<span class="j-bool">${m}</span>`;
+        if (/null/.test(m)) return `<span class="j-null">${m}</span>`;
+        return `<span class="j-num">${m}</span>`;
       }).replace(/(?<!["\\w])[{}\[\]](?!["\\w])/g, b => `<span class="j-brk">${b}</span>`);
     }
+    function countKeys(obj, c = 0) { if (typeof obj === 'object' && obj !== null) { for (const k in obj) { c++; c = countKeys(obj[k], c); } } return c; }
 
-    function countKeys(obj, count = 0) {
-      if (typeof obj === 'object' && obj !== null) {
-        for (const k in obj) {
-          count++;
-          count = countKeys(obj[k], count);
-        }
-      }
-      return count;
-    }
-
+    // ═══════════════════════════════════════════
+    //  FORMATTER
+    // ═══════════════════════════════════════════
     function convert() {
       const raw = document.getElementById('input').value;
       const out = document.getElementById('output-area');
       if (!raw.trim()) {
         out.innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Input kosong</div></div>';
-        setStatus('', '');
-        parsedData = null;
-        return;
+        setStatus('', ''); parsedData = null; return;
       }
       try {
         parsedData = tryParse(raw);
-        out.innerHTML = `<pre>${syntaxHighlightRaw(JSON.stringify(parsedData, null, 2))}</pre>`;
-        const keyCount = countKeys(parsedData);
-        setStatus(`✓ ${keyCount} keys · valid JSON`, 'ok');
+        out.innerHTML = `<pre>${syntaxHL(JSON.stringify(parsedData, null, 2))}</pre>`;
+        setStatus(`✓ ${countKeys(parsedData)} keys · valid JSON`, 'ok');
+        // Auto-history
+        saveHistory(parsedData, raw, 'formatter');
       } catch (e) {
-        const preview = s => s.substring(0, 100).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const pv = s => s.substring(0, 100).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const codes = [...raw.substring(0, 6)].map(c => `\\u${c.charCodeAt(0).toString(16).padStart(4, '0')}`).join(' ');
-        out.innerHTML = `
-      <div class="error-msg">
-        ⚠ Gagal mem-parse input.<br><br>
-        <b>Debug:</b><br>
-        • Panjang: ${raw.length} karakter<br>
-        • 100 char pertama: <code style="word-break:break-all">${preview(raw)}</code><br>
-        • 100 char terakhir: <code style="word-break:break-all">${preview(raw.slice(-100))}</code><br>
-        • Char codes awal: <code>${codes}</code>
-      </div>
-      <div style="padding:16px 20px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.8">
-        💡 <b>Tips:</b><br>
-        — Pastikan copy dari { sampai } saja tanpa karakter di luar<br>
-        — Coba hapus koma (,) di akhir jika ada<br>
-        — Jika string dalam tanda kutip satu ('), ganti dulu ke kutip dua (")
-      </div>`;
-        setStatus('✗ Parse error', 'err');
-        parsedData = null;
+        out.innerHTML = `<div class="error-msg">⚠ Gagal mem-parse input.<br><br><b>Debug:</b><br>• Panjang: ${raw.length} char<br>• Awal: <code>${pv(raw)}</code><br>• Char codes: <code>${codes}</code></div><div style="padding:14px 20px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.8">💡 <b>Tips:</b><br>— Pastikan copy dari { sampai } saja<br>— Hapus koma di akhir jika ada</div>`;
+        setStatus('✗ Parse error', 'err'); parsedData = null;
       }
     }
+    function copyOutput() { if (!parsedData) { showToast('Tidak ada output'); return; } navigator.clipboard.writeText(JSON.stringify(parsedData, null, 2)).then(() => showToast('✓ Copied!')).catch(() => showToast('Gagal copy')); }
+    function downloadJSON() { if (!parsedData) { showToast('Tidak ada data'); return; } const b = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'output.json'; a.click(); showToast('✓ Download dimulai!'); }
+    function clearInput() { document.getElementById('input').value = ''; document.getElementById('output-area').innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Hasil akan muncul di sini</div></div>'; setStatus('', ''); parsedData = null; }
+    async function pasteFromClipboard() { try { document.getElementById('input').value = await navigator.clipboard.readText(); showToast('✓ Pasted!'); } catch (e) { showToast('Izin clipboard ditolak'); } }
 
-    function copyOutput() {
-      if (!parsedData) { showToast('Tidak ada output untuk di-copy'); return; }
-      navigator.clipboard.writeText(JSON.stringify(parsedData, null, 2))
-        .then(() => showToast('✓ Copied to clipboard!'))
-        .catch(() => showToast('Gagal copy'));
-    }
-
-    function downloadJSON() {
-      if (!parsedData) { showToast('Tidak ada data untuk didownload'); return; }
-      const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'output.json';
-      a.click();
-      showToast('✓ Download dimulai!');
-    }
-
-    function clearInput() {
-      document.getElementById('input').value = '';
-      document.getElementById('output-area').innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Hasil akan muncul di sini</div></div>';
-      setStatus('', '');
-      parsedData = null;
-    }
-
-    async function pasteFromClipboard() {
-      try {
-        const text = await navigator.clipboard.readText();
-        document.getElementById('input').value = text;
-        showToast('✓ Pasted!');
-      } catch (e) {
-        showToast('Izin clipboard ditolak');
-      }
-    }
-
-    // ════════════════════════════════════════
+    // ═══════════════════════════════════════════
     //  DIFF ENGINE
-    // ════════════════════════════════════════
-
-    /**
-     * Recursively diff two JSON values.
-     * Returns array of diff entries: { path, type, oldVal, newVal }
-     */
-    function diffJSON(a, b, path = '') {
-      const results = [];
-
-      const typeA = getType(a);
-      const typeB = getType(b);
-
-      // Both are plain objects — recurse
-      if (typeA === 'object' && typeB === 'object') {
-        const keysA = Object.keys(a);
-        const keysB = Object.keys(b);
-        const allKeys = new Set([...keysA, ...keysB]);
-
-        for (const key of allKeys) {
-          const childPath = path ? `${path}.${key}` : key;
-          if (!(key in a)) {
-            // Key exists only in B → added
-            collectAll(b[key], childPath, 'added', results);
-          } else if (!(key in b)) {
-            // Key exists only in A → removed
-            collectAll(a[key], childPath, 'removed', results);
-          } else {
-            // Key in both → recurse or compare
-            const sub = diffJSON(a[key], b[key], childPath);
-            results.push(...sub);
-          }
-        }
-
-        // Both are arrays — diff by index
-      } else if (typeA === 'array' && typeB === 'array') {
-        const maxLen = Math.max(a.length, b.length);
-        for (let i = 0; i < maxLen; i++) {
-          const childPath = `${path}[${i}]`;
-          if (i >= a.length) {
-            collectAll(b[i], childPath, 'added', results);
-          } else if (i >= b.length) {
-            collectAll(a[i], childPath, 'removed', results);
-          } else {
-            const sub = diffJSON(a[i], b[i], childPath);
-            results.push(...sub);
-          }
-        }
-
-        // Primitive comparison
-      } else {
-        const aStr = JSON.stringify(a);
-        const bStr = JSON.stringify(b);
-        if (aStr !== bStr) {
-          results.push({ path, type: 'changed', oldVal: a, newVal: b });
-        }
-        // identical → nothing pushed
-      }
-
-      return results;
-    }
-
-    function getType(val) {
-      if (val === null) return 'null';
-      if (Array.isArray(val)) return 'array';
-      if (typeof val === 'object') return 'object';
-      return 'primitive';
-    }
-
-    /** Flatten all leaf paths of a value with a given type (added/removed) */
-    function collectAll(val, path, type, results) {
-      const t = getType(val);
-      if (t === 'object') {
-        for (const key of Object.keys(val)) {
-          collectAll(val[key], `${path}.${key}`, type, results);
-        }
-      } else if (t === 'array') {
-        val.forEach((item, i) => collectAll(item, `${path}[${i}]`, type, results));
-      } else {
-        // leaf
-        if (type === 'added') results.push({ path, type: 'added', newVal: val });
-        if (type === 'removed') results.push({ path, type: 'removed', oldVal: val });
-      }
-    }
-
-    // ────────────────────────────────────────
-    //  DIFF RENDER
-    // ────────────────────────────────────────
-
+    // ═══════════════════════════════════════════
     let lastDiffs = [];
-
-    function renderDiffVal(val) {
-      if (val === null) return `<span style="color:var(--null)">null</span>`;
-      if (typeof val === 'boolean') return `<span style="color:var(--bool)">${val}</span>`;
-      if (typeof val === 'number') return `<span style="color:var(--number)">${val}</span>`;
-      return `<span style="color:var(--string)">${esc(JSON.stringify(val))}</span>`;
+    function getType(v) { if (v === null) return 'null'; if (Array.isArray(v)) return 'array'; if (typeof v === 'object') return 'object'; return 'primitive'; }
+    function collectAll(val, path, type, res) {
+      const t = getType(val);
+      if (t === 'object') { for (const k of Object.keys(val)) collectAll(val[k], `${path}.${k}`, type, res); }
+      else if (t === 'array') { val.forEach((it, i) => collectAll(it, `${path}[${i}]`, type, res)); }
+      else { if (type === 'added') res.push({ path, type: 'added', newVal: val }); if (type === 'removed') res.push({ path, type: 'removed', oldVal: val }); }
     }
+    function diffJSON(a, b, path = '') {
+      const res = []; const tA = getType(a), tB = getType(b);
+      if (tA === 'object' && tB === 'object') {
+        const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+        for (const k of keys) { const cp = path ? `${path}.${k}` : k; if (!(k in a)) collectAll(b[k], cp, 'added', res); else if (!(k in b)) collectAll(a[k], cp, 'removed', res); else res.push(...diffJSON(a[k], b[k], cp)); }
+      } else if (tA === 'array' && tB === 'array') {
+        const mx = Math.max(a.length, b.length);
+        for (let i = 0; i < mx; i++) { const cp = `${path}[${i}]`; if (i >= a.length) collectAll(b[i], cp, 'added', res); else if (i >= b.length) collectAll(a[i], cp, 'removed', res); else res.push(...diffJSON(a[i], b[i], cp)); }
+      } else {
+        if (JSON.stringify(a) !== JSON.stringify(b)) res.push({ path, type: 'changed', oldVal: a, newVal: b });
+      }
+      return res;
+    }
+    function rdv(v) { if (v === null) return `<span style="color:var(--null)">null</span>`; if (typeof v === 'boolean') return `<span style="color:var(--bool)">${v}</span>`; if (typeof v === 'number') return `<span style="color:var(--number)">${v}</span>`; return `<span style="color:var(--string)">${esc(JSON.stringify(v))}</span>`; }
 
     function runDiff() {
-      const rawA = document.getElementById('diff-input-a').value;
-      const rawB = document.getElementById('diff-input-b').value;
-      const out = document.getElementById('diff-output');
-      const summaryEl = document.getElementById('diff-summary');
-      const actionsEl = document.getElementById('diff-output-actions');
+      const rA = document.getElementById('diff-input-a').value, rB = document.getElementById('diff-input-b').value;
+      const out = document.getElementById('diff-output'), sumEl = document.getElementById('diff-summary'), actEl = document.getElementById('diff-output-actions');
+      if (!rA.trim() || !rB.trim()) { out.innerHTML = '<div class="empty-state"><div class="icon">⇄</div><div>Kedua input harus diisi</div></div>'; sumEl.style.display = 'none'; actEl.style.display = 'none'; setDiffStatus('', ''); return; }
+      let oA, oB;
+      try { oA = tryParse(rA); } catch (e) { out.innerHTML = `<div class="error-msg">⚠ JSON A tidak valid</div>`; sumEl.style.display = 'none'; actEl.style.display = 'none'; setDiffStatus('✗ JSON A error', 'err'); return; }
+      try { oB = tryParse(rB); } catch (e) { out.innerHTML = `<div class="error-msg">⚠ JSON B tidak valid</div>`; sumEl.style.display = 'none'; actEl.style.display = 'none'; setDiffStatus('✗ JSON B error', 'err'); return; }
+      const diffs = diffJSON(oA, oB); lastDiffs = diffs;
+      const add = diffs.filter(d => d.type === 'added').length, rem = diffs.filter(d => d.type === 'removed').length, chg = diffs.filter(d => d.type === 'changed').length, idn = Math.max(0, countKeys(oA) - rem - chg);
+      sumEl.style.display = 'flex';
+      sumEl.innerHTML = `<span class="badge added">＋ ${add} added</span><span class="badge removed">− ${rem} removed</span><span class="badge changed">~ ${chg} changed</span><span class="badge identical">= ${idn} identical</span>`;
+      if (!diffs.length) { out.innerHTML = '<div class="empty-state"><div class="icon" style="font-size:28px;opacity:.6">✓</div><div style="color:var(--accent)">JSON identik</div></div>'; setDiffStatus('✓ Identical', 'ok'); actEl.style.display = 'none'; return; }
+      const groups = { changed: diffs.filter(d => d.type === 'changed'), added: diffs.filter(d => d.type === 'added'), removed: diffs.filter(d => d.type === 'removed') };
+      let html = '';
+      if (groups.changed.length) { html += `<div class="diff-section-label">~ Changed (${groups.changed.length})</div>`; groups.changed.forEach(d => { html += `<div class="diff-entry changed"><span class="diff-sign">~</span><span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span><span class="diff-value"><span class="diff-old">${rdv(d.oldVal)}</span><span class="diff-arrow"> → </span><span class="diff-new">${rdv(d.newVal)}</span></span></div>`; }); }
+      if (groups.added.length) { html += `<div class="diff-section-label">＋ Added (${groups.added.length})</div>`; groups.added.forEach(d => { html += `<div class="diff-entry added"><span class="diff-sign">+</span><span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span><span class="diff-value">${rdv(d.newVal)}</span></div>`; }); }
+      if (groups.removed.length) { html += `<div class="diff-section-label">− Removed (${groups.removed.length})</div>`; groups.removed.forEach(d => { html += `<div class="diff-entry removed"><span class="diff-sign">−</span><span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span><span class="diff-value">${rdv(d.oldVal)}</span></div>`; }); }
+      out.innerHTML = html; actEl.style.display = 'flex';
+      setDiffStatus(`⇄ ${add + rem + chg} difference${add + rem + chg !== 1 ? 's' : ''} found`, 'err');
+    }
+    function clearDiffA() { document.getElementById('diff-input-a').value = ''; }
+    function clearDiffB() { document.getElementById('diff-input-b').value = ''; }
+    async function pasteDiffA() { try { document.getElementById('diff-input-a').value = await navigator.clipboard.readText(); showToast('✓ Pasted to JSON A'); } catch (e) { showToast('Izin clipboard ditolak'); } }
+    async function pasteDiffB() { try { document.getElementById('diff-input-b').value = await navigator.clipboard.readText(); showToast('✓ Pasted to JSON B'); } catch (e) { showToast('Izin clipboard ditolak'); } }
+    function swapInputs() { const a = document.getElementById('diff-input-a'), b = document.getElementById('diff-input-b'); const t = a.value; a.value = b.value; b.value = t; showToast('✓ Swapped!'); }
+    function copyDiffText() { if (!lastDiffs.length) { showToast('Tidak ada diff'); return; } const lines = lastDiffs.map(d => d.type === 'added' ? `+ ${d.path}: ${JSON.stringify(d.newVal)}` : d.type === 'removed' ? `- ${d.path}: ${JSON.stringify(d.oldVal)}` : `~ ${d.path}: ${JSON.stringify(d.oldVal)} → ${JSON.stringify(d.newVal)}`); navigator.clipboard.writeText(lines.join('\n')).then(() => showToast('✓ Diff copied!')).catch(() => showToast('Gagal copy')); }
 
-      if (!rawA.trim() || !rawB.trim()) {
-        out.innerHTML = '<div class="empty-state"><div class="icon">⇄</div><div>Kedua input harus diisi</div></div>';
-        summaryEl.style.display = 'none';
-        actionsEl.style.display = 'none';
-        setDiffStatus('', '');
-        return;
+    // ═══════════════════════════════════════════
+    //  SNIPPET STORAGE
+    // ═══════════════════════════════════════════
+    const SNIP_KEY = 'jf_snippets';
+    const HIST_KEY = 'jf_history';
+    const HIST_MAX = 10;
+
+    function loadSnippets() { try { return JSON.parse(localStorage.getItem(SNIP_KEY) || '[]'); } catch { return []; } }
+    function saveSnippets(arr) { localStorage.setItem(SNIP_KEY, JSON.stringify(arr)); updateBadge(); }
+    function loadHistory() { try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); } catch { return []; } }
+    function saveHistoryArr(arr) { localStorage.setItem(HIST_KEY, JSON.stringify(arr)); updateBadge(); }
+
+    function updateBadge() {
+      const total = loadSnippets().length + loadHistory().length;
+      document.getElementById('snip-badge').textContent = total || 0;
+    }
+
+    function autoSnipName(obj) {
+      if (Array.isArray(obj)) return `Array [${obj.length} items]`;
+      const keys = Object.keys(obj || {});
+      if (!keys.length) return '{}';
+      const first = keys[0];
+      const val = obj[first];
+      const vStr = typeof val === 'string' ? `"${val.substring(0, 20)}"` : JSON.stringify(val);
+      return `${first}: ${vStr}`;
+    }
+
+    function saveHistory(obj, raw, source) {
+      const hist = loadHistory();
+      // Avoid duplicate consecutive saves
+      if (hist.length && JSON.stringify(hist[0].json) === JSON.stringify(obj)) return;
+      hist.unshift({ id: uid(), name: null, json: obj, raw, source, savedAt: new Date().toISOString(), type: 'history' });
+      if (hist.length > HIST_MAX) hist.splice(HIST_MAX);
+      saveHistoryArr(hist);
+    }
+
+    // ═══════════════════════════════════════════
+    //  SAVE MODAL
+    // ═══════════════════════════════════════════
+    let _modalSource = 'formatter';
+
+    function openSaveModal(source) {
+      // Validate we have data to save
+      let obj, raw;
+      if (source === 'formatter') {
+        if (!parsedData) { showToast('Tidak ada JSON untuk disimpan'); return; }
+        obj = parsedData; raw = JSON.stringify(parsedData, null, 2);
+      } else if (source === 'diff-a') {
+        raw = document.getElementById('diff-input-a').value.trim();
+        if (!raw) { showToast('JSON A kosong'); return; }
+        try { obj = tryParse(raw); } catch { showToast('JSON A tidak valid'); return; }
+      } else {
+        raw = document.getElementById('diff-input-b').value.trim();
+        if (!raw) { showToast('JSON B kosong'); return; }
+        try { obj = tryParse(raw); } catch { showToast('JSON B tidak valid'); return; }
       }
+      _modalSource = source;
+      _modalObj = obj; _modalRaw = raw;
+      document.getElementById('modal-name').value = '';
+      document.getElementById('save-modal').classList.add('open');
+      setTimeout(() => document.getElementById('modal-name').focus(), 80);
+    }
+    let _modalObj = null, _modalRaw = '';
 
-      let objA, objB;
-      try { objA = tryParse(rawA); } catch (e) {
-        out.innerHTML = `<div class="error-msg">⚠ JSON A tidak valid: ${esc(e.message)}</div>`;
-        summaryEl.style.display = 'none';
-        actionsEl.style.display = 'none';
-        setDiffStatus('✗ JSON A error', 'err');
-        return;
-      }
-      try { objB = tryParse(rawB); } catch (e) {
-        out.innerHTML = `<div class="error-msg">⚠ JSON B tidak valid: ${esc(e.message)}</div>`;
-        summaryEl.style.display = 'none';
-        actionsEl.style.display = 'none';
-        setDiffStatus('✗ JSON B error', 'err');
-        return;
-      }
+    function closeSaveModal() {
+      document.getElementById('save-modal').classList.remove('open');
+    }
 
-      const diffs = diffJSON(objA, objB);
-      lastDiffs = diffs;
+    function confirmSave() {
+      const name = document.getElementById('modal-name').value.trim();
+      if (!name) { showToast('Nama tidak boleh kosong'); document.getElementById('modal-name').focus(); return; }
+      const snips = loadSnippets();
+      snips.unshift({ id: uid(), name, json: _modalObj, raw: _modalRaw, source: _modalSource, savedAt: new Date().toISOString(), type: 'snippet' });
+      saveSnippets(snips);
+      closeSaveModal();
+      showToast(`📌 "${name}" tersimpan!`);
+      if (currentTab === 'snippets') renderSnipList();
+    }
 
-      const added = diffs.filter(d => d.type === 'added').length;
-      const removed = diffs.filter(d => d.type === 'removed').length;
-      const changed = diffs.filter(d => d.type === 'changed').length;
-      const totalKeysA = countKeys(objA);
-      const identical = totalKeysA - removed - changed;
+    // Enter key in modal
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeSaveModal();
+      if (e.key === 'Enter' && document.getElementById('save-modal').classList.contains('open')) confirmSave();
+    });
 
-      // Summary bar
-      summaryEl.style.display = 'flex';
-      summaryEl.innerHTML = `
-    <span class="badge added">  ＋ ${added} added</span>
-    <span class="badge removed">− ${removed} removed</span>
-    <span class="badge changed">~ ${changed} changed</span>
-    <span class="badge identical">= ${Math.max(0, identical)} identical</span>
-  `;
+    // ═══════════════════════════════════════════
+    //  SNIPPETS UI
+    // ═══════════════════════════════════════════
+    let selectedSnipId = null;
 
-      if (diffs.length === 0) {
-        out.innerHTML = `<div class="empty-state"><div class="icon" style="font-size:28px;opacity:0.6">✓</div><div style="color:var(--accent)">JSON identik — tidak ada perbedaan</div></div>`;
-        setDiffStatus('✓ Identical', 'ok');
-        actionsEl.style.display = 'none';
-        return;
-      }
-
-      // Group by type for display
-      const addedDiffs = diffs.filter(d => d.type === 'added');
-      const removedDiffs = diffs.filter(d => d.type === 'removed');
-      const changedDiffs = diffs.filter(d => d.type === 'changed');
+    function renderSnipList() {
+      const q = document.getElementById('snip-search').value.toLowerCase();
+      const snips = loadSnippets().filter(s => !q || s.name.toLowerCase().includes(q) || autoSnipName(s.json).toLowerCase().includes(q));
+      const hist = loadHistory().filter(s => !q || autoSnipName(s.json).toLowerCase().includes(q));
 
       let html = '';
-
-      if (changedDiffs.length) {
-        html += `<div class="diff-section-label">~ Changed (${changedDiffs.length})</div>`;
-        changedDiffs.forEach(d => {
-          html += `
-        <div class="diff-entry changed">
-          <span class="diff-sign">~</span>
-          <span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span>
-          <span class="diff-value">
-            <span class="diff-old">${renderDiffVal(d.oldVal)}</span>
-            <span class="diff-arrow"> → </span>
-            <span class="diff-new">${renderDiffVal(d.newVal)}</span>
-          </span>
-        </div>`;
-        });
+      if (snips.length) {
+        html += `<div class="snip-section-title">📌 Saved (${snips.length})</div>`;
+        html += snips.map(s => snipCard(s)).join('');
       }
-
-      if (addedDiffs.length) {
-        html += `<div class="diff-section-label">＋ Added (${addedDiffs.length})</div>`;
-        addedDiffs.forEach(d => {
-          html += `
-        <div class="diff-entry added">
-          <span class="diff-sign">+</span>
-          <span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span>
-          <span class="diff-value">${renderDiffVal(d.newVal)}</span>
-        </div>`;
-        });
+      if (hist.length) {
+        html += `<div class="snip-section-title">🕐 History (${hist.length} terbaru)</div>`;
+        html += hist.map(s => snipCard(s)).join('');
       }
-
-      if (removedDiffs.length) {
-        html += `<div class="diff-section-label">− Removed (${removedDiffs.length})</div>`;
-        removedDiffs.forEach(d => {
-          html += `
-        <div class="diff-entry removed">
-          <span class="diff-sign">−</span>
-          <span class="diff-path" title="${esc(d.path)}">${esc(d.path)}</span>
-          <span class="diff-value">${renderDiffVal(d.oldVal)}</span>
-        </div>`;
-        });
+      if (!snips.length && !hist.length) {
+        html = `<div class="snip-empty"><div class="ei">🗂</div><div>${q ? 'Tidak ditemukan' : 'Belum ada snippet tersimpan'}</div></div>`;
       }
-
-      out.innerHTML = html;
-      actionsEl.style.display = 'flex';
-
-      const total = added + removed + changed;
-      setDiffStatus(`⇄ ${total} difference${total !== 1 ? 's' : ''} found`, total > 0 ? 'err' : 'ok');
+      document.getElementById('snip-list').innerHTML = html;
     }
 
-    // ────────────────────────────────────────
-    //  DIFF CONTROLS
-    // ────────────────────────────────────────
-
-    function clearDiffA() {
-      document.getElementById('diff-input-a').value = '';
+    function snipCard(s) {
+      const name = s.name || autoSnipName(s.json);
+      const preview = JSON.stringify(s.json).substring(0, 60);
+      const srcLabel = { 'formatter': 'FORMATTER', 'diff-a': 'DIFF A', 'diff-b': 'DIFF B' }[s.source] || s.source;
+      const sel = s.id === selectedSnipId ? 'selected' : '';
+      return `<div class="snip-card ${sel}" id="sc-${s.id}" onclick="selectSnip('${s.id}','${s.type}')">
+    <div class="snip-card-name"><span>${esc(name)}</span><span class="snip-source-badge ${s.source}">${srcLabel}</span></div>
+    <div class="snip-card-preview">${esc(preview)}${preview.length >= 60 ? '…' : ''}</div>
+    <div class="snip-card-meta"><span>${fmtDate(s.savedAt)}</span></div>
+  </div>`;
     }
 
-    function clearDiffB() {
-      document.getElementById('diff-input-b').value = '';
+    function selectSnip(id, type) {
+      selectedSnipId = id;
+      renderSnipList();
+      const arr = type === 'snippet' ? loadSnippets() : loadHistory();
+      const s = arr.find(x => x.id === id);
+      if (!s) return;
+
+      const name = s.name || autoSnipName(s.json);
+      document.getElementById('snip-preview-header').style.display = 'flex';
+      document.getElementById('snip-preview-title').textContent = name;
+      document.getElementById('snip-preview-body').innerHTML = `<pre>${syntaxHL(JSON.stringify(s.json, null, 2))}</pre>`;
+
+      // Action buttons
+      let acts = `<button onclick="loadSnip('${id}','${type}','formatter')">↗ Load ke Formatter</button>
+    <button onclick="loadSnip('${id}','${type}','diff-a')">↗ Diff A</button>
+    <button onclick="loadSnip('${id}','${type}','diff-b')">↗ Diff B</button>
+    <button onclick="copySnip('${id}','${type}')">⎘ Copy</button>`;
+      if (type === 'history') acts += `<button class="primary" onclick="promoteToSnippet('${id}')">📌 Save</button>`;
+      acts += `<button class="danger" onclick="deleteSnip('${id}','${type}')">🗑</button>`;
+      document.getElementById('snip-preview-actions').innerHTML = acts;
     }
 
-    async function pasteDiffA() {
-      try {
-        const text = await navigator.clipboard.readText();
-        document.getElementById('diff-input-a').value = text;
-        showToast('✓ Pasted to JSON A');
-      } catch (e) { showToast('Izin clipboard ditolak'); }
+    function loadSnip(id, type, dest) {
+      const arr = type === 'snippet' ? loadSnippets() : loadHistory();
+      const s = arr.find(x => x.id === id);
+      if (!s) return;
+      const pretty = JSON.stringify(s.json, null, 2);
+      if (dest === 'formatter') {
+        document.getElementById('input').value = pretty;
+        switchTab('formatter');
+        convert();
+        showToast('✓ Loaded ke Formatter');
+      } else if (dest === 'diff-a') {
+        document.getElementById('diff-input-a').value = pretty;
+        switchTab('diff');
+        showToast('✓ Loaded ke JSON A');
+      } else {
+        document.getElementById('diff-input-b').value = pretty;
+        switchTab('diff');
+        showToast('✓ Loaded ke JSON B');
+      }
     }
 
-    async function pasteDiffB() {
-      try {
-        const text = await navigator.clipboard.readText();
-        document.getElementById('diff-input-b').value = text;
-        showToast('✓ Pasted to JSON B');
-      } catch (e) { showToast('Izin clipboard ditolak'); }
+    function copySnip(id, type) {
+      const arr = type === 'snippet' ? loadSnippets() : loadHistory();
+      const s = arr.find(x => x.id === id);
+      if (!s) return;
+      navigator.clipboard.writeText(JSON.stringify(s.json, null, 2)).then(() => showToast('✓ Copied!')).catch(() => showToast('Gagal copy'));
     }
 
-    function swapInputs() {
-      const a = document.getElementById('diff-input-a');
-      const b = document.getElementById('diff-input-b');
-      const tmp = a.value;
-      a.value = b.value;
-      b.value = tmp;
-      showToast('✓ JSON A ↔ B ditukar');
+    function deleteSnip(id, type) {
+      if (type === 'snippet') {
+        const arr = loadSnippets().filter(x => x.id !== id);
+        saveSnippets(arr);
+      } else {
+        const arr = loadHistory().filter(x => x.id !== id);
+        saveHistoryArr(arr);
+      }
+      if (selectedSnipId === id) {
+        selectedSnipId = null;
+        document.getElementById('snip-preview-header').style.display = 'none';
+        document.getElementById('snip-preview-body').innerHTML = '<div class="snip-no-sel"><div class="icon">🗂</div><div>Pilih snippet dari daftar untuk preview</div></div>';
+      }
+      renderSnipList();
+      showToast('🗑 Dihapus');
     }
 
-    function copyDiffText() {
-      if (!lastDiffs.length) { showToast('Tidak ada diff'); return; }
-      const lines = lastDiffs.map(d => {
-        if (d.type === 'added') return `+ ${d.path}: ${JSON.stringify(d.newVal)}`;
-        if (d.type === 'removed') return `- ${d.path}: ${JSON.stringify(d.oldVal)}`;
-        if (d.type === 'changed') return `~ ${d.path}: ${JSON.stringify(d.oldVal)} → ${JSON.stringify(d.newVal)}`;
-        return '';
-      });
-      navigator.clipboard.writeText(lines.join('\n'))
-        .then(() => showToast('✓ Diff copied!'))
-        .catch(() => showToast('Gagal copy'));
+    function promoteToSnippet(histId) {
+      const hist = loadHistory();
+      const s = hist.find(x => x.id === histId);
+      if (!s) return;
+      _modalObj = s.json; _modalRaw = JSON.stringify(s.json, null, 2); _modalSource = s.source;
+      document.getElementById('modal-name').value = autoSnipName(s.json);
+      document.getElementById('save-modal').classList.add('open');
+      setTimeout(() => document.getElementById('modal-name').focus(), 80);
     }
 
-    // ════════════════════════════════════════
-    //  KEYBOARD SHORTCUTS
-    // ════════════════════════════════════════
+    // Close modal on overlay click
+    document.getElementById('save-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeSaveModal(); });
 
+    // ═══════════════════════════════════════════
+    //  KEYBOARD
+    // ═══════════════════════════════════════════
     document.addEventListener('keydown', e => {
-      if (e.ctrlKey || e.metaKey) {
-        if (e.key === 'Enter') {
-          if (currentTab === 'formatter') convert();
-          else runDiff();
-        }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        if (currentTab === 'formatter') convert();
+        else if (currentTab === 'diff') runDiff();
       }
     });
 
-    // ════════════════════════════════════════
-    //  DRAG & DROP (formatter mode)
-    // ════════════════════════════════════════
+    // ═══════════════════════════════════════════
+    //  DRAG & DROP
+    // ═══════════════════════════════════════════
     document.addEventListener('dragover', e => e.preventDefault());
     document.addEventListener('drop', e => {
       e.preventDefault();
-      const file = e.dataTransfer.files[0];
-      if (!file) return;
+      const file = e.dataTransfer.files[0]; if (!file) return;
       const reader = new FileReader();
       reader.onload = ev => {
-        if (currentTab === 'formatter') {
-          document.getElementById('input').value = ev.target.result;
-          convert();
-        } else {
-          // drop to whichever area
-          document.getElementById('diff-input-a').value = ev.target.result;
-        }
+        if (currentTab === 'formatter') { document.getElementById('input').value = ev.target.result; convert(); }
+        else if (currentTab === 'diff') { document.getElementById('diff-input-a').value = ev.target.result; }
       };
       reader.readAsText(file);
       showToast(`📂 ${file.name} dimuat`);
     });
 
-    // init status visibility
+    // ═══════════════════════════════════════════
+    //  INIT
+    // ═══════════════════════════════════════════
     document.getElementById('diff-status').style.display = 'none';
+    document.getElementById('status').style.display = '';
+    updateBadge();
   </script>
 </body>
 
