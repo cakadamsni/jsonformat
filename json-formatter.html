@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JSON Formatter</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: #252a3a;
+    --accent: #00e5a0;
+    --accent2: #0088ff;
+    --text: #e8eaf0;
+    --muted: #5a6080;
+    --error: #ff4d6a;
+
+    /* syntax colors */
+    --key: #79b8ff;
+    --string: #9ecbff;
+    --number: #f8c555;
+    --bool: #ff9f7f;
+    --null: #ff4d6a;
+    --bracket: #888faa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    padding: 28px 40px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .logo {
+    width: 36px;
+    height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+    letter-spacing: 1px;
+  }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+  }
+  .panel:last-child { border-right: none; }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    gap: 10px;
+  }
+
+  .panel-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .panel-actions { display: flex; gap: 8px; }
+
+  button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface2);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  button.primary:hover { background: #00ffb3; border-color: #00ffb3; color: #000; }
+
+  textarea {
+    flex: 1;
+    background: var(--surface);
+    border: none;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    padding: 20px;
+    resize: none;
+    outline: none;
+    min-height: 500px;
+  }
+
+  textarea::placeholder { color: var(--muted); }
+
+  #output-area {
+    flex: 1;
+    background: var(--surface);
+    overflow: auto;
+    min-height: 500px;
+    padding: 20px;
+  }
+
+  #output-area pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* Syntax highlight */
+  .j-key    { color: var(--key); }
+  .j-str    { color: var(--string); }
+  .j-num    { color: var(--number); }
+  .j-bool   { color: var(--bool); }
+  .j-null   { color: var(--null); }
+  .j-brk    { color: var(--bracket); }
+
+  .error-msg {
+    color: var(--error);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 16px 20px;
+    background: rgba(255,77,106,0.08);
+    border-left: 3px solid var(--error);
+    margin: 20px;
+    border-radius: 4px;
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--muted);
+    gap: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .empty-state .icon { font-size: 36px; opacity: 0.3; }
+
+  footer {
+    padding: 14px 40px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    position: relative;
+    z-index: 1;
+  }
+
+  #status { margin-left: auto; }
+  #status.ok { color: var(--accent); }
+  #status.err { color: var(--error); }
+
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--accent);
+    color: #000;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 8px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  .divider {
+    width: 1px;
+    background: var(--border);
+    position: relative;
+  }
+
+  .convert-btn-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 20px;
+  }
+
+  @media (max-width: 768px) {
+    main { grid-template-columns: 1fr; }
+    header { padding: 18px 20px; }
+    .subtitle { display: none; }
+    footer { padding: 12px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">{ }</div>
+  <h1>JSON <span>Formatter</span></h1>
+  <span class="subtitle">NO BACKEND · 100% CLIENT-SIDE</span>
+</header>
+
+<main>
+  <!-- INPUT -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label">Input</span>
+      <div class="panel-actions">
+        <button onclick="clearInput()">✕ Clear</button>
+        <button onclick="pasteFromClipboard()">⌘ Paste</button>
+        <button class="primary" onclick="convert()">▶ Convert</button>
+      </div>
+    </div>
+    <textarea id="input" placeholder='Paste raw JSON string di sini...
+
+Contoh:
+{\"key\":\"value\",\"list\":[{\"a\":1}]}
+
+Atau string yang ter-escape seperti:
+\"{\\\"billingAddress\\\":\\\"...\\\"}\"'></textarea>
+  </div>
+
+  <!-- OUTPUT -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-label">Output · JSON</span>
+      <div class="panel-actions">
+        <button onclick="copyOutput()">⎘ Copy</button>
+        <button onclick="downloadJSON()">↓ Download</button>
+      </div>
+    </div>
+    <div id="output-area">
+      <div class="empty-state">
+        <div class="icon">{ }</div>
+        <div>Hasil akan muncul di sini</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span>Drag & Drop file JSON juga didukung</span>
+  <span id="status"></span>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let parsedData = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function setStatus(msg, type) {
+  const s = document.getElementById('status');
+  s.textContent = msg;
+  s.className = type;
+}
+
+function tryParse(raw) {
+  raw = raw.trim();
+
+  // Strip trailing comma (common copy-paste artifact)
+  raw = raw.replace(/,\s*$/, '');
+
+  const attempts = [];
+
+  // Attempt 1: direct parse as-is
+  attempts.push(() => JSON.parse(raw));
+
+  // Attempt 2: strip surrounding single or double quotes
+  attempts.push(() => {
+    let s = raw;
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      s = s.slice(1, -1);
+    }
+    return JSON.parse(s);
+  });
+
+  // Attempt 3: strip quotes then unescape \"
+  attempts.push(() => {
+    let s = raw;
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      s = s.slice(1, -1);
+    }
+    s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    return JSON.parse(s);
+  });
+
+  // Attempt 4: treat entire raw as escaped JSON string value
+  // e.g. raw = {\"key\":\"val\"} => wrap as JSON string and parse twice
+  attempts.push(() => {
+    const wrapped = '"' + raw.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+    const inner = JSON.parse(wrapped);
+    return JSON.parse(inner);
+  });
+
+  // Attempt 5: raw already is an escaped string value (starts with \")
+  attempts.push(() => {
+    const wrapped = '"' + raw + '"';
+    const inner = JSON.parse(wrapped);
+    return JSON.parse(inner);
+  });
+
+  // Attempt 6: extract first JSON object or array from text
+  attempts.push(() => {
+    const match = raw.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if (!match) throw new Error('no match');
+    return JSON.parse(match[1]);
+  });
+
+  // Attempt 7: remove outer quotes, then extract JSON object/array
+  attempts.push(() => {
+    let s = raw;
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+      s = s.slice(1, -1);
+    }
+    s = s.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    const match = s.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    if (!match) throw new Error('no match');
+    return JSON.parse(match[1]);
+  });
+
+  // Attempt 8: aggressive — replace all \" with " globally, strip outer quotes
+  attempts.push(() => {
+    let s = raw.replace(/^["']|["']$/g, '');
+    // replace escaped quotes
+    s = s.replace(/\\"/g, '"');
+    // fix double-escaped backslashes
+    s = s.replace(/\\\\/g, '\\');
+    return JSON.parse(s);
+  });
+
+  for (const attempt of attempts) {
+    try {
+      const result = attempt();
+      if (result !== null && result !== undefined) return result;
+    } catch(e) { /* try next */ }
+  }
+
+  throw new Error('Tidak dapat mem-parse input. Pastikan format valid.');
+}
+
+function syntaxHighlight(json) {
+  return json.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|true|false|null|-?\d+\.?\d*([eE][+-]?\d+)?)/g, match => {
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) {
+        return `<span class="j-key">${esc(match)}</span>`;
+      }
+      return `<span class="j-str">${esc(match)}</span>`;
+    }
+    if (/true|false/.test(match)) return `<span class="j-bool">${match}</span>`;
+    if (/null/.test(match)) return `<span class="j-null">${match}</span>`;
+    return `<span class="j-num">${match}</span>`;
+  }).replace(/[{}\[\]]/g, b => `<span class="j-brk">${b}</span>`);
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function convert() {
+  const raw = document.getElementById('input').value;
+  const out = document.getElementById('output-area');
+
+  if (!raw.trim()) {
+    out.innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Input kosong</div></div>';
+    setStatus('', '');
+    parsedData = null;
+    return;
+  }
+
+  try {
+    parsedData = tryParse(raw);
+    out.innerHTML = `<pre>${syntaxHighlightRaw(JSON.stringify(parsedData, null, 2))}</pre>`;
+    const keyCount = countKeys(parsedData);
+    setStatus(`✓ ${keyCount} keys · valid JSON`, 'ok');
+  } catch(e) {
+    const preview = s => s.substring(0, 100).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const codes = [...raw.substring(0,6)].map(c => `\\u${c.charCodeAt(0).toString(16).padStart(4,'0')}`).join(' ');
+    out.innerHTML = `
+      <div class="error-msg">
+        ⚠ Gagal mem-parse input.<br><br>
+        <b>Debug:</b><br>
+        • Panjang: ${raw.length} karakter<br>
+        • 100 char pertama: <code style="word-break:break-all">${preview(raw)}</code><br>
+        • 100 char terakhir: <code style="word-break:break-all">${preview(raw.slice(-100))}</code><br>
+        • Char codes awal: <code>${codes}</code>
+      </div>
+      <div style="padding:16px 20px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.8">
+        💡 <b>Tips:</b><br>
+        — Pastikan copy dari { sampai } saja tanpa karakter di luar<br>
+        — Coba hapus koma (,) di akhir jika ada<br>
+        — Jika string dalam tanda kutip satu ('), ganti dulu ke kutip dua (")
+      </div>`;
+    setStatus('✗ Parse error', 'err');
+    parsedData = null;
+  }
+}
+
+function syntaxHighlightRaw(json) {
+  const escaped = json.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped.replace(/("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|true|false|null|-?\d+\.?\d*([eE][+-]?\d+)?)/g, match => {
+    if (/^"/.test(match)) {
+      if (/:$/.test(match)) return `<span class="j-key">${match}</span>`;
+      return `<span class="j-str">${match}</span>`;
+    }
+    if (/true|false/.test(match)) return `<span class="j-bool">${match}</span>`;
+    if (/null/.test(match)) return `<span class="j-null">${match}</span>`;
+    return `<span class="j-num">${match}</span>`;
+  }).replace(/(?<!["\w])[{}\[\]](?!["\w])/g, b => `<span class="j-brk">${b}</span>`);
+}
+
+function countKeys(obj, count = 0) {
+  if (typeof obj === 'object' && obj !== null) {
+    for (const k in obj) {
+      count++;
+      count = countKeys(obj[k], count);
+    }
+  }
+  return count;
+}
+
+function copyOutput() {
+  if (!parsedData) { showToast('Tidak ada output untuk di-copy'); return; }
+  navigator.clipboard.writeText(JSON.stringify(parsedData, null, 2))
+    .then(() => showToast('✓ Copied to clipboard!'))
+    .catch(() => showToast('Gagal copy'));
+}
+
+function downloadJSON() {
+  if (!parsedData) { showToast('Tidak ada data untuk didownload'); return; }
+  const blob = new Blob([JSON.stringify(parsedData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'output.json';
+  a.click();
+  showToast('✓ Download dimulai!');
+}
+
+function clearInput() {
+  document.getElementById('input').value = '';
+  document.getElementById('output-area').innerHTML = '<div class="empty-state"><div class="icon">{ }</div><div>Hasil akan muncul di sini</div></div>';
+  setStatus('', '');
+  parsedData = null;
+}
+
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    document.getElementById('input').value = text;
+    showToast('✓ Pasted!');
+  } catch(e) {
+    showToast('Izin clipboard ditolak');
+  }
+}
+
+// Auto-convert on Ctrl+Enter
+document.getElementById('input').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') convert();
+});
+
+// Drag & drop file
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('input').value = ev.target.result;
+    convert();
+  };
+  reader.readAsText(file);
+  showToast(`📂 ${file.name} dimuat`);
+});
+</script>
+</body>
+</html>
